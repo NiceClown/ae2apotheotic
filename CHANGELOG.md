@@ -1,0 +1,65 @@
+# Changelog
+
+All notable changes to **AE2 Apotheotic Automation** will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [1.1.0] - 2026-10-16
+
+### Added
+* **AE2-Style Industrial Block Textures & Concept Arts:**
+  * Redesigned all machine textures to adhere strictly to the classic Applied Energistics 2 industrial aesthetic:
+    * Standard brushed slate-steel chassis (`#4E5462`), authentic AE2 beveled metallic borders, and riveted corner chamfers.
+    * **Apotheotic Pattern Encoder:** High-contrast cyan ME CRT terminal display, 3x3 pattern matrix, bottom pattern card slot with glowing insertion guide, and protected side Fluix cooling tubes with violet illumination.
+    * **Apotheotic Gem Pattern Provider:** Standard AE2 machine casing, 5x5 glowing cyan ME pattern matrix, and 4 corner brass brackets with inlaid Apotheosis gems (ruby, sapphire, emerald, amethyst).
+    * **Apotheotic Infusion Pattern Provider:** Standard AE2 3x3 glowing cyan pattern aperture, subtle violet runic inlays on steel bevels, and an inset vertical glass containment cylinder displaying luminous liquid experience (Liquid XP).
+  * Distinctive item sprites for pattern cards:
+    * `Encoded Gem Upgrade Pattern`: AE2 data card with circuit traces, sapphire gem, and golden purity upgrade chevrons (`>>`).
+    * `Encoded Gem Crushing Pattern`: Titanium card chassis with a shattering crystal and rainbow Gem Dust sparkles.
+    * `Encoded Infusion Pattern`: Purpur tech card with glowing magenta enchanting seal and luminous liquid XP essence droplet.
+* **Expanded Gem Provider Capacity (27 Slots):**
+  * Increased pattern storage in the **Gem Pattern Provider** from 9 to **27 slots** (arranged in a standard 9x3 inventory grid).
+  * Fully integrated with ME Pattern Access Terminal, block drops, and NBT serialization.
+* **Guaranteed Minimum Threshold for Gem Crushing:**
+  * Automated crushing through the ME network now yields the guaranteed minimum threshold matching `min_count` from Apotheosis salvaging recipes (`apotheosis:salvaging/gem_dust`), ensuring autocrafting is never more profitable than manual salvaging at the Salvaging Table:
+    * **Cracked:** 1 Gem Dust
+    * **Chipped:** 1 Gem Dust
+    * **Flawed:** 2 Gem Dust
+    * **Normal:** 3 Gem Dust
+    * **Flawless:** 4 Gem Dust
+    * **Perfect:** 5 Gem Dust
+  * Autocrafting patterns (`GemCrushPattern`), `GemProviderBlockEntity`, and `EncoderLogic` preview reflect and output these exact values.
+  * Preview ratio text dynamically updates (`1 gem = 4 dust`).
+
+### Fixed & Improved
+* **Widened 210px Pattern Encoder Window & Restored Arrow:**
+  * Widened the encoder interface from 176px to **210px** to provide ample horizontal space for long localized names and multi-step craft displays without text clipping.
+  * Restored the full purity upgrade transition text with arrow: **`from → to`** (e.g. `Flawless → Perfect`), centered cleanly on the header row.
+  * Repositioned navigation buttons (`<` at `x = 30`, `>` at `x = 186`) to guarantee a 4px margin from the sample slot and 7px padding from the text label.
+  * In Infusion Mode, relocated the `Auto` button to `(x = 94, y = 90)` between XP cost and max Eterna, completely eliminating the 6px overlap with the preview result slot.
+* **GUI Layout & Text Overlaps Across All Screens:**
+  * Standardized GUI screen titles (`Pattern Encoder`, `Gem Pattern Provider`, `Infusion Pattern Provider`).
+  * Fixed text collisions in Gem Provider by dedicating separate lines for network status (`y = 17`) and Gem Case connection (`y = 28`), adjusting the 27 pattern slots down to `y = 38..92`.
+  * Dedicated a clean row (`y = 94`) for machine alert / problem text, setting the player inventory title to `y = 104`, completely eliminating text overlap in all machine states (connected, offline, missing case, full inventory).
+  * Verified all GUI screens with rendered playtest screenshots.
+
+---
+
+## [1.0.0] - 2026-10-15
+
+### Added
+* Initial release of **AE2 Apotheotic Automation** for Minecraft 26.1.2 on NeoForge.
+* **Apotheotic Pattern Encoder:**
+  * Dedicated encoder for creating Apotheotic autocrafting patterns.
+  * Gem Upgrade Mode: 2x gems + materials to produce the next purity tier. Supports Shift+Encode chain generation up to Perfect purity.
+  * Gem Crushing Mode: Crush gems into dust (supports exact gem, same purity, or any gem).
+  * Infusion Mode: Automates table infusion recipes with Eterna, Quanta, Arcana tuning and liquid XP handling.
+* **Apotheotic Pattern Provider (Gems):**
+  * Connects directly to adjacent Apotheosis Gem Cases to execute automated purity upgrades and crushing.
+* **Apotheotic Pattern Provider (Infusion):**
+  * Interfaces directly with adjacent Enchanting Tables (including Enchanting Table of the Raven) to execute infusion crafting.
+  * Built-in experience buffer with support for pipe input and pulling liquid experience from neighboring tanks (such as Just Dire Things Experience Holder).
+* Full English (`en_us`) and Russian (`ru_ru`) localization.

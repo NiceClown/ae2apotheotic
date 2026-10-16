@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "B": "ae2:blank_pattern",
+    "D": "apotheosis:gem_dust",
+    "T": "minecraft:crafting_table",
+    "E": "ae2:engineering_processor"
+  },
+  "pattern": [
+    " B ",
+    "DTD",
+    " E "
+  ],
+  "result": {
+    "id": "ae2apotheotic:pattern_encoder"
+  }
+}

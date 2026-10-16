@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": "minecraft:anvil",
+    "D": "apotheosis:gem_dust",
+    "P": "ae2:pattern_provider",
+    "L": "ae2:logic_processor"
+  },
+  "pattern": [
+    " A ",
+    "DPD",
+    " L "
+  ],
+  "result": {
+    "id": "ae2apotheotic:gem_pattern_provider"
+  }
+}

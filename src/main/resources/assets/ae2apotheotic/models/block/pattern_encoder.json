@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "ae2apotheotic:block/pattern_encoder_front",
+    "north": "ae2apotheotic:block/pattern_encoder_front",
+    "south": "ae2apotheotic:block/pattern_encoder_side",
+    "east": "ae2apotheotic:block/pattern_encoder_side",
+    "west": "ae2apotheotic:block/pattern_encoder_side",
+    "up": "ae2apotheotic:block/pattern_encoder_top",
+    "down": "ae2apotheotic:block/pattern_encoder_bottom"
+  }
+}

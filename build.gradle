@@ -1,0 +1,58 @@
+// Gradle build for IDE work and dev runs (ModDevGradle). Not used by build-local.sh.
+// Dependency jars are taken from the parent folder (AE2, Apotheosis, ...) and from libs/ (Placebo, GuideME,
+// optionally Just Dire Things / JEI for testing).
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+neoForge {
+    version = project.neo_version
+
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+            programArgument '--nogui'
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: '..', include: [
+        'appliedenergistics2-*.jar',
+        'Apotheosis-*.jar',
+        'ApothicAttributes-*.jar',
+        'ApothicEnchanting-*.jar'
+    ])
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+}
+
+tasks.named('processResources', ProcessResources) {
+    var replaceProperties = [mod_version: mod_version]
+    inputs.properties replaceProperties
+    filesMatching(['META-INF/neoforge.mods.toml']) {
+        expand replaceProperties
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

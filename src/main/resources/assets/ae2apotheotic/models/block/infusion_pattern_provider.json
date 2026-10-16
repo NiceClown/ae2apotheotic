@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "ae2apotheotic:block/infusion_pattern_provider_front",
+    "north": "ae2apotheotic:block/infusion_pattern_provider_front",
+    "south": "ae2apotheotic:block/infusion_pattern_provider_side",
+    "east": "ae2apotheotic:block/infusion_pattern_provider_side",
+    "west": "ae2apotheotic:block/infusion_pattern_provider_side",
+    "up": "ae2apotheotic:block/infusion_pattern_provider_top",
+    "down": "ae2apotheotic:block/infusion_pattern_provider_bottom"
+  }
+}

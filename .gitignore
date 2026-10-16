@@ -1,0 +1,39 @@
+# Gradle
+.gradle/
+build/
+!src/**/build/
+gradle-app.setting
+!gradle-wrapper.jar
+.gradletasknamecache
+
+# Java / Compilation
+*.class
+*.jar
+!src/**/libs/*.jar
+
+# IDEs & Editors
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.project
+.classpath
+.settings/
+bin/
+out/
+
+# Minecraft & Mod Dev Runs
+run/
+logs/
+*.log
+
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Scratch / Dev scripts
+tools/
+*.tmp
+*.bak

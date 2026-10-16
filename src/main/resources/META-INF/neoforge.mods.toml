@@ -1,0 +1,49 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="MIT"
+
+[[mods]]
+modId="ae2apotheotic"
+version="${mod_version}"
+displayName="AE2 Apotheotic Automation"
+authors="Kirill"
+description='''
+AE2 addon that automates Apotheosis machines through ME autocrafting:
+gem purity upgrades in the Gem Case, crushing gems into dust and
+infusion crafting on the Enchanting Table of the Raven.
+'''
+
+[[dependencies.ae2apotheotic]]
+    modId="neoforge"
+    type="required"
+    versionRange="[26.1.2.64-beta,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.ae2apotheotic]]
+    modId="minecraft"
+    type="required"
+    versionRange="[26.1.2]"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.ae2apotheotic]]
+    modId="ae2"
+    type="required"
+    versionRange="[26.1.13-beta,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.ae2apotheotic]]
+    modId="apotheosis"
+    type="required"
+    versionRange="[9.1.0,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.ae2apotheotic]]
+    modId="apothic_enchanting"
+    type="required"
+    versionRange="[2.1.0,)"
+    ordering="AFTER"
+    side="BOTH"
