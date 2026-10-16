@@ -20,9 +20,7 @@ An addon for **Applied Energistics 2** that connects AE2 autocrafting directly t
 * **Optional Integrations:**
   * **Just Dire Things** (supported for adjacent liquid experience storage via the Experience Holder)
 
-> [!IMPORTANT]
-> **Notice for All the Mods 11 (ATM11) Players:**
-> Earlier ATM11 versions may ship with Apotheosis 9.0.3 and Apothic Enchanting 2.0.0. The Gem Case uses a different internal API in those versions. Make sure to update to **Apotheosis 9.1.0+**, **Apothic Enchanting 2.1.0+**, and **Apothic Attributes 3.1.0+**.
+
 
 ---
 
