@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-10-18
+
+### Added
+* **Categorized Gem Pattern Provider Interface:**
+  * Replaced the flat pattern grid with an interactive categorized architecture organized by gem type.
+  * **Top Gem Selector Strip:** Paginated scrollable strip displaying 8 gem icons per page with navigation arrows (`<`, `>`), page counter, and active gem highlight with progress indicator badges.
+  * **Selected Gem Category View:** Dedicated header showing the current gem's icon, localized name, installed tier count, and prev/next cycling arrows.
+  * **Purity Tier Slots (I to V + Dust):**
+    * Tier I: Cracked → Chipped
+    * Tier II: Chipped → Flawed
+    * Tier III: Flawed → Normal
+    * Tier IV: Normal → Flawless
+    * Tier V: Flawless → Perfect
+    * Tier VI (Dust): Dedicated slot for crushing this specific gem into Gem Dust.
+  * **General Crushing Category:** Dedicated category 0 for general or purity-based gem crushing patterns.
+  * **Slot-Level Validation:** Enforces strict pattern placement matching category gem and upgrade purity, both via GUI interactions and the ME Pattern Access Terminal.
+  * **Smart Pattern Auto-Routing (Shift-Click):** Shift-clicking any encoded pattern from the player inventory automatically inspects its gem and tier, routes it into the exact designated slot, and instantly switches the category view to that gem.
+* **Direct ME Network Experience (XP) Pulling for Infusion Provider:**
+  * The **Apotheotic Infusion Pattern Provider** now prioritizes extracting liquid experience (`c:experience` / `neoforge:experience`) directly from the connected ME network's fluid storage first.
+  * Strict 3-tier priority execution:
+    1. **ME Network Storage (Primary):** Extracted directly using ME grid power and storage services.
+    2. **Internal XP Buffer:** Fallback to the provider's internal buffer.
+    3. **Adjacent Fluid Tanks:** Fallback to physical tanks (e.g. Just Dire Things Experience Holder) in an atomic transaction with zero XP leakage.
+  * GUI status label and tooltips updated to display external XP (`XP external: %s`) and explain the network-first extraction priority.
+
+---
+
 ## [1.1.0] - 2026-10-16
 
 ### Added

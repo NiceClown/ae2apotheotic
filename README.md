@@ -56,6 +56,17 @@ The **Apotheotic Pattern Encoder** interface features a 210px layout designed to
 
 The Gem Pattern Provider automatically places the two gems and materials directly into the adjacent Gem Case, executes the native upgrade operation, extracts the upgraded gem, and deposits it into the ME network.
 
+### Categorized Gem Pattern Provider Interface
+The Gem Pattern Provider features a clean, categorized architecture organized per gem:
+* **Gem Category Strip:** Top selector showing 8 gems per page with `<` and `>` paging arrows, progress badges, and page numbers.
+* **Category View:** Shows the current gem icon, localized name, installed tier count, and prev/next cycling arrows.
+* **Tier Slots (I to V + Dust):**
+  * Tiers I–V: Slots strictly accept the upgrade pattern for that gem (Cracked→Chipped up to Flawless→Perfect).
+  * Dust Slot: Dedicated slot for crushing this specific gem into dust.
+* **General Crushing:** Category 0 accommodates general crushing patterns.
+* **Smart Auto-Routing:** Shift-clicking any pattern card automatically identifies the gem and tier, inserts it into the designated slot, and flips the category view directly to that gem.
+* **ME Pattern Terminal Integration:** Slot-level validation is maintained across both manual insertion and remote access via ME Pattern Access Terminals.
+
 ### 2. Gem Dust (Crushing)
 Crushes gems into gem dust. Autocrafting guarantees the minimum threshold matching native Apotheosis salvaging recipes:
 * **Cracked:** 1 Gem Dust
@@ -83,9 +94,10 @@ Crushing is performed internally by the Gem Pattern Provider — a Gem Case is n
 * **With Standard Apothic Enchanting Tables:** Stats are determined by bookshelves surrounding the table. The crafting job executes only if surrounding shelves meet or exceed the required stats.
 
 #### Experience Handling
-The experience cost matches table enchanting (`level = max(ceil(recipe Eterna), 3)`). XP is consumed automatically in this order:
-1. Internal XP buffer of the provider (configurable capacity, default 10,000 pts). Manageable in the GUI via **"+1 lvl"**, **"+All"**, and **"Take"**, or supplied via fluid pipes.
-2. Adjacent fluid tanks holding liquid experience (`c:experience`, 20 mB = 1 XP point) — such as the **Experience Holder** from **Just Dire Things**.
+The experience cost matches table enchanting (`level = max(ceil(recipe Eterna), 3)`). XP is consumed automatically in this strict order:
+1. **ME Network Storage (Primary):** Pulls liquid experience directly from connected ME storage (`c:experience` / `neoforge:experience`) using ME network energy and storage services.
+2. **Internal XP Buffer:** Provider buffer (configurable capacity, default 10,000 pts). Manageable via GUI buttons (**"+1 lvl"**, **"+All"**, **"Take"**) or piped in via fluid pipes.
+3. **Adjacent Fluid Tanks:** External tanks holding liquid experience (20 mB = 1 XP point) — such as the **Experience Holder** from **Just Dire Things**.
 
 ---
 
@@ -112,7 +124,7 @@ Using Git Bash and Prism Launcher dependencies:
 ```bash
 ./build-local.sh
 ```
-Compiles against JDK 25 and NeoForge/Minecraft libraries, outputting `build/libs/ae2apotheotic-1.1.0.jar` and automatically updating local Prism instances.
+Compiles against JDK 25 and NeoForge/Minecraft libraries, outputting `build/libs/ae2apotheotic-1.2.0.jar` and automatically updating local Prism instances.
 
 ### Gradle Build
 Standard ModDevGradle configuration is included in `build.gradle` and `settings.gradle`.

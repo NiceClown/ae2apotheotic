@@ -77,8 +77,8 @@
   "gui.ae2apotheotic.table.missing": "Table: not found",
   "gui.ae2apotheotic.patterns": "Patterns: %s",
   "gui.ae2apotheotic.xp.stored": "XP buffer: %s",
-  "gui.ae2apotheotic.xp.nearby": "XP nearby: %s",
-  "gui.ae2apotheotic.xp.tooltip": "Experience is paid from the buffer first, then pulled as liquid experience from adjacent tanks (e.g. the Experience Holder from Just Dire Things). Liquid experience can also be piped into the provider.",
+  "gui.ae2apotheotic.xp.nearby": "XP external: %s",
+  "gui.ae2apotheotic.xp.tooltip": "Experience is taken from the ME network first, then from the internal buffer, then pulled as liquid experience from adjacent tanks (e.g. the Experience Holder from Just Dire Things). Liquid experience can also be piped into the provider.",
   "gui.ae2apotheotic.xp.deposit_level": "+1 lvl",
   "gui.ae2apotheotic.xp.deposit_level.tooltip": "Put one of your levels into the buffer",
   "gui.ae2apotheotic.xp.deposit_all": "+All",
@@ -94,5 +94,14 @@
   "gui.ae2apotheotic.problem.upgrade_rejected": "! Gem Case refused the upgrade",
   "gui.ae2apotheotic.problem.no_table": "! No enchanting table",
   "gui.ae2apotheotic.problem.stats_mismatch": "! Table stats don't match",
-  "gui.ae2apotheotic.problem.not_enough_xp": "! Not enough experience"
+  "gui.ae2apotheotic.problem.not_enough_xp": "! Not enough experience",
+
+  "gui.ae2apotheotic.category.general": "General Crushing",
+  "gui.ae2apotheotic.tier.installed": "%s / %s tiers",
+  "gui.ae2apotheotic.tier.1": "Tier I: Cracked → Chipped",
+  "gui.ae2apotheotic.tier.2": "Tier II: Chipped → Flawed",
+  "gui.ae2apotheotic.tier.3": "Tier III: Flawed → Normal",
+  "gui.ae2apotheotic.tier.4": "Tier IV: Normal → Flawless",
+  "gui.ae2apotheotic.tier.5": "Tier V: Flawless → Perfect",
+  "gui.ae2apotheotic.tier.crush": "Crush to Dust"
 }

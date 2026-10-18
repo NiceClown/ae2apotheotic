@@ -1,10 +1,15 @@
 package com.ae2apotheotic.blockentity;
 
+import appeng.api.config.Actionable;
 import appeng.api.crafting.IPatternDetails;
+import appeng.api.networking.IGrid;
+import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
+import appeng.api.storage.MEStorage;
+import appeng.api.storage.StorageHelper;
 import com.ae2apotheotic.ApotheoticConfig;
 import com.ae2apotheotic.pattern.InfusionEncoding;
 import com.ae2apotheotic.pattern.InfusionPattern;
@@ -171,8 +176,25 @@ public class InfusionProviderBlockEntity extends AbstractProviderBlockEntity {
         return (int) Math.min(Integer.MAX_VALUE, storedXpMb / XpHelper.MB_PER_XP);
     }
 
-    /** Experience points available in adjacent liquid experience tanks. */
-    public int getNearbyXp() {
+    /** Liquid experience (mB) available in the connected ME network. */
+    public long getNetworkXpMb() {
+        IGrid grid = mainNode.getGrid();
+        if (grid == null) {
+            return 0;
+        }
+        MEStorage storage = grid.getStorageService().getInventory();
+        KeyCounter available = storage.getAvailableStacks();
+        long mb = 0;
+        for (Object2LongMap.Entry<AEKey> entry : available) {
+            if (entry.getKey() instanceof AEFluidKey fluidKey && XpHelper.isXpFluid(fluidKey.toResource())) {
+                mb += entry.getLongValue();
+            }
+        }
+        return mb;
+    }
+
+    /** Liquid experience (mB) available in adjacent physical tanks. */
+    public long getNearbyTankMb() {
         if (level == null) {
             return 0;
         }
@@ -189,27 +211,90 @@ public class InfusionProviderBlockEntity extends AbstractProviderBlockEntity {
                 }
             }
         }
-        return (int) Math.min(Integer.MAX_VALUE, mb / XpHelper.MB_PER_XP);
+        return mb;
     }
 
-    /** Takes the experience from the buffer and the adjacent tanks. Either everything is taken or nothing. */
+    /** Total external experience points available to the provider (ME network first, then adjacent tanks). */
+    public int getNearbyXp() {
+        long totalMb = getNetworkXpMb() + getNearbyTankMb();
+        return (int) Math.min(Integer.MAX_VALUE, totalMb / XpHelper.MB_PER_XP);
+    }
+
+    /** Extracts liquid experience directly from the ME network. */
+    private long pullFromNetwork(long maxMb, boolean simulate) {
+        IGrid grid = mainNode.getGrid();
+        if (grid == null || maxMb <= 0) {
+            return 0;
+        }
+        MEStorage storage = grid.getStorageService().getInventory();
+        KeyCounter available = storage.getAvailableStacks();
+        long pulled = 0;
+        Actionable actionable = simulate ? Actionable.SIMULATE : Actionable.MODULATE;
+        for (Object2LongMap.Entry<AEKey> entry : available) {
+            if (pulled >= maxMb) {
+                break;
+            }
+            if (entry.getKey() instanceof AEFluidKey fluidKey && XpHelper.isXpFluid(fluidKey.toResource())) {
+                long want = maxMb - pulled;
+                long extracted = StorageHelper.poweredExtraction(
+                    grid.getEnergyService(), storage, fluidKey, want, actionSource, actionable
+                );
+                pulled += extracted;
+            }
+        }
+        return pulled;
+    }
+
+    /**
+     * Takes the required experience.
+     * Order of priority:
+     * 1. ME Network fluid storage (FIRST priority if present in network)
+     * 2. Internal buffer (storedXpMb)
+     * 3. Adjacent tanks (e.g. Just Dire Things Experience Holder)
+     */
     private boolean consumeXp(int points) {
         long needMb = (long) points * XpHelper.MB_PER_XP;
-        if (storedXpMb >= needMb) {
-            storedXpMb -= needMb;
+        if (needMb <= 0) {
+            return true;
+        }
+
+        long netSim = pullFromNetwork(needMb, true);
+        long bufferAvail = storedXpMb;
+        long neighborsAvail = getNearbyTankMb();
+
+        if (netSim + bufferAvail + neighborsAvail < needMb) {
+            return false;
+        }
+
+        // 1. ME Network FIRST
+        if (netSim > 0) {
+            long wantNet = Math.min(netSim, needMb);
+            long pulled = pullFromNetwork(wantNet, false);
+            needMb -= pulled;
+            if (needMb <= 0) {
+                return true;
+            }
+        }
+
+        // 2. Next: internal buffer
+        long fromBuffer = Math.min(storedXpMb, needMb);
+        long deficitAfterBuffer = needMb - fromBuffer;
+
+        if (deficitAfterBuffer <= 0) {
+            storedXpMb -= fromBuffer;
             setChanged();
             return true;
         }
-        long deficit = needMb - storedXpMb;
-        // Tanks like the Experience Holder only hand out whole points, so ask for a multiple of 20 mB.
-        long request = (deficit + XpHelper.MB_PER_XP - 1) / XpHelper.MB_PER_XP * XpHelper.MB_PER_XP;
+
+        // 3. Next: adjacent tanks
+        long request = (deficitAfterBuffer + XpHelper.MB_PER_XP - 1) / XpHelper.MB_PER_XP * XpHelper.MB_PER_XP;
         try (Transaction tx = Transaction.openRoot()) {
             long pulled = pullFromNeighbors(request, tx);
-            if (pulled < deficit) {
+            if (pulled < deficitAfterBuffer) {
                 return false;
             }
             tx.commit();
-            storedXpMb = storedXpMb + pulled - needMb;
+            storedXpMb = storedXpMb - fromBuffer + pulled - deficitAfterBuffer;
         }
         setChanged();
         return true;

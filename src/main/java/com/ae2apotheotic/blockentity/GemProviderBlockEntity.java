@@ -28,33 +28,117 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 import org.jspecify.annotations.Nullable;
 
 /**
  * Pattern provider that works with an adjacent Apotheosis Gem Case.
- * <ul>
- * <li>Gem upgrade patterns: the two gems and the materials are put into the Gem Case, the Gem Case performs its own
- * purity upgrade, and the upgraded gem is taken out again and sent to the ME network.</li>
- * <li>Gem crushing patterns: gems are smashed into gem dust (one dust per gem, like under a falling anvil). This does
- * not need the Gem Case.</li>
- * </ul>
+ * Organized into categories (one for general crushing and one per registered gem),
+ * each holding slots for each purity upgrade tier plus crushing.
  */
 public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
     public static final int FLAG_GEM_CASE = 1;
-    public static final int PATTERN_SLOTS = 27;
+    public static final int SLOTS_PER_CATEGORY = 6;
+    public static final int MAX_CATEGORIES = 64;
+    public static final int PATTERN_SLOTS = MAX_CATEGORIES * SLOTS_PER_CATEGORY;
+
+    private int selectedCategory = 1;
 
     public GemProviderBlockEntity(BlockPos pos, BlockState state) {
         super(ModRegistry.GEM_PROVIDER_BE.get(), pos, state, PATTERN_SLOTS);
     }
 
+    public int getSelectedCategory() {
+        return selectedCategory;
+    }
+
+    public void setSelectedCategory(int category) {
+        this.selectedCategory = category;
+        setChanged();
+    }
+
+    @Override
+    public void handleButton(Player player, int buttonId) {
+        setSelectedCategory(buttonId);
+    }
+
+    @Override
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        output.putInt("selected_category", selectedCategory);
+    }
+
+    @Override
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        selectedCategory = input.getIntOr("selected_category", 1);
+    }
+
+    /**
+     * Strict validator for what patterns fit into each category and tier slot.
+     */
+    public static boolean isPatternValidForSlot(int slotIndex, ItemStack stack) {
+        if (stack.isEmpty()) {
+            return false;
+        }
+        int category = slotIndex / SLOTS_PER_CATEGORY;
+        int tier = slotIndex % SLOTS_PER_CATEGORY;
+
+        List<Gem> gems = GemKeys.sortedGems();
+        if (category == 0) {
+            // General category (Category 0) accepts any GemCrushPattern
+            return stack.is(ModRegistry.GEM_CRUSH_PATTERN.get());
+        }
+
+        int gemIdx = category - 1;
+        if (gemIdx < 0 || gemIdx >= gems.size()) {
+            return false;
+        }
+        Gem gem = gems.get(gemIdx);
+
+        if (tier < 5) {
+            // Upgrade tiers: 0=Cracked->Chipped, 1=Chipped->Flawed, 2=Flawed->Normal, 3=Normal->Flawless, 4=Flawless->Perfect
+            if (!stack.is(ModRegistry.GEM_UPGRADE_PATTERN.get())) {
+                return false;
+            }
+            GemUpgradeEncoding enc = stack.get(ModRegistry.GEM_UPGRADE.get());
+            if (enc == null) {
+                return false;
+            }
+            UnsocketedGem unsocketed = UnsocketedGem.of(enc.input().toStack());
+            if (!unsocketed.isValid() || unsocketed.gem().get() != gem) {
+                return false;
+            }
+            return unsocketed.purity().ordinal() == tier;
+        } else {
+            // Tier 5: Crushing pattern for this specific gem
+            if (!stack.is(ModRegistry.GEM_CRUSH_PATTERN.get())) {
+                return false;
+            }
+            GemCrushEncoding enc = stack.get(ModRegistry.GEM_CRUSH.get());
+            if (enc == null || enc.mode() != GemCrushEncoding.CrushMode.EXACT || enc.gem().isEmpty()) {
+                return false;
+            }
+            UnsocketedGem unsocketed = UnsocketedGem.of(enc.gem().get().toStack());
+            return unsocketed.isValid() && unsocketed.gem().get() == gem;
+        }
+    }
+
     @Override
     public boolean acceptsPatternItem(ItemStack stack) {
         return stack.is(ModRegistry.GEM_UPGRADE_PATTERN.get()) || stack.is(ModRegistry.GEM_CRUSH_PATTERN.get());
+    }
+
+    @Override
+    public boolean acceptsPatternInSlot(int slot, ItemStack stack) {
+        return isPatternValidForSlot(slot, stack);
     }
 
     @Override

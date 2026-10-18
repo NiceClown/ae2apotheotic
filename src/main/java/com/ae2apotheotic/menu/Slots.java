@@ -14,11 +14,22 @@ final class Slots {
     static final class Filtered extends Slot {
         private final Predicate<ItemStack> filter;
         private final int limit;
+        private final BooleanSupplier active;
 
         Filtered(Container container, int index, int x, int y, Predicate<ItemStack> filter, int limit) {
+            this(container, index, x, y, filter, limit, null);
+        }
+
+        Filtered(Container container, int index, int x, int y, Predicate<ItemStack> filter, int limit, BooleanSupplier active) {
             super(container, index, x, y);
             this.filter = filter;
             this.limit = limit;
+            this.active = active;
+        }
+
+        @Override
+        public boolean isActive() {
+            return active == null || active.getAsBoolean();
         }
 
         @Override

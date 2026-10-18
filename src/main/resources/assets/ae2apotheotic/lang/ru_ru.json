@@ -77,8 +77,8 @@
   "gui.ae2apotheotic.table.missing": "Стол: нет",
   "gui.ae2apotheotic.patterns": "Шаблонов: %s",
   "gui.ae2apotheotic.xp.stored": "Буфер: %s оп.",
-  "gui.ae2apotheotic.xp.nearby": "Рядом: %s оп.",
-  "gui.ae2apotheotic.xp.tooltip": "Опыт берётся сначала из буфера, затем вытягивается жидким опытом из соседних хранилищ (например, Experience Holder из Just Dire Things). Жидкий опыт можно и закачивать в поставщик трубами.",
+  "gui.ae2apotheotic.xp.nearby": "Вне буфера: %s оп.",
+  "gui.ae2apotheotic.xp.tooltip": "Опыт берётся в первую очередь напрямую из МЭ-сети, затем из внутреннего буфера, затем вытягивается жидким опытом из соседних хранилищ (например, Experience Holder из Just Dire Things). Жидкий опыт также можно подавать по трубам.",
   "gui.ae2apotheotic.xp.deposit_level": "+1 ур",
   "gui.ae2apotheotic.xp.deposit_level.tooltip": "Положить один свой уровень в буфер",
   "gui.ae2apotheotic.xp.deposit_all": "+Всё",
@@ -94,5 +94,14 @@
   "gui.ae2apotheotic.problem.upgrade_rejected": "! Шкатулка отказала",
   "gui.ae2apotheotic.problem.no_table": "! Нет стола зачарований",
   "gui.ae2apotheotic.problem.stats_mismatch": "! Статы стола не подходят",
-  "gui.ae2apotheotic.problem.not_enough_xp": "! Не хватает опыта"
+  "gui.ae2apotheotic.problem.not_enough_xp": "! Не хватает опыта",
+
+  "gui.ae2apotheotic.category.general": "Общее измельчение",
+  "gui.ae2apotheotic.tier.installed": "%s / %s ступеней",
+  "gui.ae2apotheotic.tier.1": "Тир I: Треснувший → Сколотый",
+  "gui.ae2apotheotic.tier.2": "Тир II: Сколотый → С изъяном",
+  "gui.ae2apotheotic.tier.3": "Тир III: С изъяном → Обычный",
+  "gui.ae2apotheotic.tier.4": "Тир IV: Обычный → Безупречный",
+  "gui.ae2apotheotic.tier.5": "Тир V: Безупречный → Идеальный",
+  "gui.ae2apotheotic.tier.crush": "Измельчение в пыль"
 }

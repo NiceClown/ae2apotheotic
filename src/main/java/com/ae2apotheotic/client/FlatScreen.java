@@ -55,12 +55,12 @@ abstract class FlatScreen<T extends AbstractContainerMenu> extends AbstractConta
         g.fill(x + 2, y + 2, x + imageWidth - 2, y + imageHeight - 2, 0xFFC6C6C6);
         // colored strip that tells the blocks apart
         g.fill(x + 2, y + 2, x + imageWidth - 2, y + 4, accent);
+        extractPanel(g, x, y);
         for (Slot slot : menu.slots) {
             if (slot.isActive()) {
                 drawSlot(g, x + slot.x - 1, y + slot.y - 1);
             }
         }
-        extractPanel(g, x, y);
     }
 
     /** Extra background decoration, in absolute coordinates. */

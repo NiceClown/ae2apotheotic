@@ -65,8 +65,8 @@ public abstract class AbstractProviderBlockEntity extends BlockEntity
     private static final int MAX_BUFFERED_OUTPUTS = 64;
 
     private final int patternSlots;
-    private final IManagedGridNode mainNode;
-    private final IActionSource actionSource;
+    protected final IManagedGridNode mainNode;
+    protected final IActionSource actionSource;
     protected final AppEngInternalInventory patternInventory;
     private final List<IPatternDetails> patterns = new ArrayList<>();
     private final List<GenericStack> outputBuffer = new ArrayList<>();
@@ -86,7 +86,7 @@ public abstract class AbstractProviderBlockEntity extends BlockEntity
         this.patternInventory.setFilter(new IAEItemFilter() {
             @Override
             public boolean allowInsert(InternalInventory inv, int slot, ItemStack stack) {
-                return acceptsPatternItem(stack);
+                return acceptsPatternInSlot(slot, stack);
             }
         });
         this.mainNode = GridHelper.createManagedNode(this, NodeListener.INSTANCE)
@@ -106,6 +106,11 @@ public abstract class AbstractProviderBlockEntity extends BlockEntity
 
     /** Whether the item may be placed into the pattern slots. */
     public abstract boolean acceptsPatternItem(ItemStack stack);
+
+    /** Whether the item may be placed into a specific pattern slot. */
+    public boolean acceptsPatternInSlot(int slot, ItemStack stack) {
+        return acceptsPatternItem(stack);
+    }
 
     protected abstract boolean acceptsPattern(IPatternDetails details);
 

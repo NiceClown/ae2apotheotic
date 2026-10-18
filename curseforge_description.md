@@ -26,10 +26,10 @@ An addon for **Applied Energistics 2** that connects AE2 autocrafting directly t
 | Block | Visual Style | Capacity | Purpose |
 | :--- | :--- | :--- | :--- |
 | **Apotheotic Pattern Encoder** | Industrial AE2 terminal chassis with cyan screen and violet Fluix runes | 1 Sample, 1 Blank, 1 Output | Encodes specialized patterns of all three types |
-| **Apotheotic Pattern Provider (Gems)** | AE2 machine casing with brass gem sockets (Ruby, Sapphire, Emerald, Amethyst) | 27 Pattern Slots (9x3 grid) | Placed directly adjacent to a Gem Case |
+| **Apotheotic Pattern Provider (Gems)** | AE2 machine casing with brass gem sockets (Ruby, Sapphire, Emerald, Amethyst) | Categorized UI (Tiers I–V + Dust per gem) | Placed directly adjacent to a Gem Case |
 | **Apotheotic Pattern Provider (Infusion)** | AE2 machine casing with violet runes and illuminated liquid XP tube | 9 Pattern Slots | Placed directly adjacent to an Enchanting Table (Raven's) |
 
-The Pattern Providers act as standard ME network nodes: they require an ME channel, can be connected via cable from any side, appear in the Pattern Access Terminal, and hold specialized pattern cards (27 slots for Gems, 9 slots for Infusion). Addon patterns only work inside their respective specialized providers (a standard ME Pattern Provider will simply ignore them).
+The Pattern Providers act as standard ME network nodes: they require an ME channel, can be connected via cable from any side, appear in the Pattern Access Terminal, and hold specialized pattern cards (categorized per gem for Gems, 9 slots for Infusion). Addon patterns only work inside their respective specialized providers (a standard ME Pattern Provider will simply ignore them).
 
 ---
 
@@ -66,8 +66,9 @@ When paired with a **Raven's Enchanting Table**, the provider applies the stat v
 
 #### Experience Handling
 The XP cost is calculated the same way as at an Enchanting Table (third slot, `level = max(ceil(recipe Eterna), 3)`; for Infused Dragon's Breath, this equals 1,631 XP points). Experience is consumed in the following order:
-1. From the provider's internal XP buffer (managed via the **"+1 Lvl" / "+All" / "Take"** buttons in its GUI, or filled via pipes with liquid XP);
-2. Extracted as liquid experience (`c:experience`, where `20 mB = 1 XP point`) from adjacent fluid tanks — such as an **Experience Holder** from **Just Dire Things** placed directly against the provider.
+1. Directly from the connected ME network's fluid storage (`c:experience` / `neoforge:experience`) using ME network energy;
+2. From the provider's internal XP buffer (managed via the **"+1 Lvl" / "+All" / "Take"** buttons in its GUI, or filled via pipes with liquid XP);
+3. Extracted as liquid experience (`20 mB = 1 XP point`) from adjacent fluid tanks — such as an **Experience Holder** from **Just Dire Things** placed directly against the provider.
 
 If there is not enough experience available, the crafting job waits until enough XP is supplied. The pattern itself does not track fluids — all XP calculations are handled automatically by the provider.
 

@@ -1,9 +1,16 @@
 package com.ae2apotheotic.menu;
 
 import com.ae2apotheotic.blockentity.AbstractProviderBlockEntity;
+import com.ae2apotheotic.blockentity.GemProviderBlockEntity;
 import com.ae2apotheotic.blockentity.InfusionProviderBlockEntity;
 import com.ae2apotheotic.blockentity.ProviderProblem;
+import com.ae2apotheotic.pattern.GemCrushEncoding;
+import com.ae2apotheotic.pattern.GemKeys;
+import com.ae2apotheotic.pattern.GemUpgradeEncoding;
 import com.ae2apotheotic.registry.ModRegistry;
+import dev.shadowsoffire.apotheosis.socket.gem.Gem;
+import dev.shadowsoffire.apotheosis.socket.gem.UnsocketedGem;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.Container;
@@ -24,12 +31,13 @@ public class ProviderMenu extends AbstractContainerMenu {
 
     public static final int FLAG_ONLINE = 1 << 8;
 
-    private static final int D_FLAGS = 0;
-    private static final int D_PROBLEM = 1;
-    private static final int D_PATTERNS = 2;
+    public static final int D_FLAGS = 0;
+    public static final int D_PROBLEM = 1;
+    public static final int D_PATTERNS = 2;
     private static final int D_XP_STORED = 3; // + 4
     private static final int D_XP_NEARBY = 5; // + 6
-    private static final int D_SIZE = 7;
+    private static final int D_CATEGORY = 7;
+    private static final int D_SIZE = 8;
 
     private final @Nullable AbstractProviderBlockEntity provider;
     private final BlockPos pos;
@@ -43,7 +51,7 @@ public class ProviderMenu extends AbstractContainerMenu {
     public static ProviderMenu fromNetwork(int containerId, Inventory inventory, RegistryFriendlyByteBuf buf) {
         BlockPos pos = buf.readBlockPos();
         boolean infusion = buf.readBoolean();
-        int patternSlots = buf.readableBytes() >= 4 ? buf.readInt() : (infusion ? 9 : 27);
+        int patternSlots = buf.readableBytes() >= 4 ? buf.readInt() : (infusion ? 9 : GemProviderBlockEntity.PATTERN_SLOTS);
         return new ProviderMenu(containerId, inventory, pos, infusion, patternSlots, null, new SimpleContainer(patternSlots));
     }
 
@@ -61,16 +69,27 @@ public class ProviderMenu extends AbstractContainerMenu {
         this.patternSlots = patternSlots;
         this.playerStart = patternSlots;
         this.playerEnd = playerStart + 36;
-        if (patternSlots == 27) {
-            for (int i = 0; i < 27; i++) {
-                addSlot(new Slots.Filtered(patterns, i, 8 + (i % 9) * 18, 38 + (i / 9) * 18, this::acceptsPattern, 1));
+        if (!infusion) {
+            // Gem Provider: add 6 slots for each category
+            for (int cat = 0; cat < GemProviderBlockEntity.MAX_CATEGORIES; cat++) {
+                final int c = cat;
+                for (int t = 0; t < GemProviderBlockEntity.SLOTS_PER_CATEGORY; t++) {
+                    int slotIdx = c * GemProviderBlockEntity.SLOTS_PER_CATEGORY + t;
+                    int x = 43 + t * 21;
+                    int y = 82;
+                    addSlot(new Slots.Filtered(patterns, slotIdx, x, y,
+                        stack -> GemProviderBlockEntity.isPatternValidForSlot(slotIdx, stack), 1,
+                        () -> getSelectedCategory() == c));
+                }
             }
+            addStandardInventorySlots(inventory, 24, 120);
         } else {
+            // Infusion Provider: standard 9 pattern slots
             for (int i = 0; i < patternSlots; i++) {
                 addSlot(new Slots.Filtered(patterns, i, 8 + (i % 3) * 18, 20 + (i / 3) * 18, this::acceptsPattern, 1));
             }
+            addStandardInventorySlots(inventory, 8, 114);
         }
-        addStandardInventorySlots(inventory, 8, 114);
         addDataSlots(data);
         if (provider != null) {
             updateData();
@@ -95,6 +114,8 @@ public class ProviderMenu extends AbstractContainerMenu {
         if (provider instanceof InfusionProviderBlockEntity inf) {
             setInt(D_XP_STORED, inf.getStoredXp());
             setInt(D_XP_NEARBY, inf.getNearbyXp());
+        } else if (provider instanceof GemProviderBlockEntity gemProv) {
+            data.set(D_CATEGORY, gemProv.getSelectedCategory());
         }
     }
 
@@ -123,8 +144,75 @@ public class ProviderMenu extends AbstractContainerMenu {
             return false;
         }
         provider.handleButton(player, buttonId);
+        if (provider instanceof GemProviderBlockEntity) {
+            setSelectedCategory(buttonId);
+        }
         refreshTimer = 0;
         return true;
+    }
+
+    public int getSelectedCategory() {
+        if (provider instanceof GemProviderBlockEntity gemProv) {
+            return gemProv.getSelectedCategory();
+        }
+        return data.get(D_CATEGORY);
+    }
+
+    public void setSelectedCategory(int category) {
+        if (provider instanceof GemProviderBlockEntity gemProv) {
+            gemProv.setSelectedCategory(category);
+        }
+        data.set(D_CATEGORY, category);
+    }
+
+    public int getCategoryPatternCount(int category) {
+        int count = 0;
+        int start = category * GemProviderBlockEntity.SLOTS_PER_CATEGORY;
+        for (int i = 0; i < GemProviderBlockEntity.SLOTS_PER_CATEGORY && start + i < patternSlots; i++) {
+            if (slots.get(start + i).hasItem()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public int findSlotForPattern(ItemStack stack) {
+        List<Gem> gems = GemKeys.sortedGems();
+        if (stack.is(ModRegistry.GEM_UPGRADE_PATTERN.get())) {
+            GemUpgradeEncoding enc = stack.get(ModRegistry.GEM_UPGRADE.get());
+            if (enc != null) {
+                UnsocketedGem unsocketed = UnsocketedGem.of(enc.input().toStack());
+                if (unsocketed.isValid()) {
+                    int gemIdx = gems.indexOf(unsocketed.gem().get());
+                    if (gemIdx >= 0) {
+                        int category = gemIdx + 1;
+                        int tier = unsocketed.purity().ordinal();
+                        return category * GemProviderBlockEntity.SLOTS_PER_CATEGORY + tier;
+                    }
+                }
+            }
+        } else if (stack.is(ModRegistry.GEM_CRUSH_PATTERN.get())) {
+            GemCrushEncoding enc = stack.get(ModRegistry.GEM_CRUSH.get());
+            if (enc != null) {
+                if (enc.mode() == GemCrushEncoding.CrushMode.EXACT && enc.gem().isPresent()) {
+                    UnsocketedGem unsocketed = UnsocketedGem.of(enc.gem().get().toStack());
+                    if (unsocketed.isValid()) {
+                        int gemIdx = gems.indexOf(unsocketed.gem().get());
+                        if (gemIdx >= 0) {
+                            return (gemIdx + 1) * GemProviderBlockEntity.SLOTS_PER_CATEGORY + 5;
+                        }
+                    }
+                } else {
+                    for (int s = 0; s < GemProviderBlockEntity.SLOTS_PER_CATEGORY; s++) {
+                        if (!slots.get(s).hasItem()) {
+                            return s;
+                        }
+                    }
+                    return 0;
+                }
+            }
+        }
+        return -1;
     }
 
     @Override
@@ -139,8 +227,23 @@ public class ProviderMenu extends AbstractContainerMenu {
             if (!moveItemStackTo(stack, playerStart, playerEnd, true)) {
                 return ItemStack.EMPTY;
             }
-        } else if (!acceptsPattern(stack) || !moveItemStackTo(stack, 0, patternSlots, false)) {
-            return ItemStack.EMPTY;
+        } else if (infusion) {
+            if (!acceptsPattern(stack) || !moveItemStackTo(stack, 0, patternSlots, false)) {
+                return ItemStack.EMPTY;
+            }
+        } else {
+            int targetSlot = findSlotForPattern(stack);
+            if (targetSlot >= 0 && targetSlot < patternSlots) {
+                Slot target = slots.get(targetSlot);
+                if (!target.hasItem() && target.mayPlace(stack)) {
+                    target.setByPlayer(stack.split(1));
+                    setSelectedCategory(targetSlot / GemProviderBlockEntity.SLOTS_PER_CATEGORY);
+                } else {
+                    return ItemStack.EMPTY;
+                }
+            } else {
+                return ItemStack.EMPTY;
+            }
         }
         if (stack.isEmpty()) {
             slot.setByPlayer(ItemStack.EMPTY);
