@@ -1,4 +1,4 @@
----
+﻿---
 navigation:
   parent: ae2apotheotic/index.md
   title: Infusion Pattern Provider
@@ -32,7 +32,7 @@ It acts as a standard ME network device: requires 1 channel, connects via cable 
 
 <br clear="all" />
 
-![Infusion Pattern Provider Setup](assets/infusion_provider_setup.jpg)
+![Infusion Pattern Provider Setup](assets/infusion_provider_setup.png)
 
 <br clear="all" />
 

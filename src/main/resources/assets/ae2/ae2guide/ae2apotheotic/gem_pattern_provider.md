@@ -1,4 +1,4 @@
----
+﻿---
 navigation:
   parent: ae2apotheotic/index.md
   title: Gem Pattern Provider
@@ -30,7 +30,7 @@ Like standard ME Pattern Providers, it functions as a full ME network device: it
 
 <br clear="all" />
 
-![Gem Pattern Provider Setup](assets/gem_provider_setup.jpg)
+![Gem Pattern Provider Setup](assets/gem_provider_setup.png)
 
 <br clear="all" />
 

@@ -1,4 +1,4 @@
----
+﻿---
 navigation:
   parent: index.md
   title: Поставщик шаблонов самоцветов
@@ -30,7 +30,7 @@ item_ids:
 
 <br clear="all" />
 
-![Установка поставщика самоцветов](assets/gem_provider_setup.jpg)
+![Установка поставщика самоцветов](assets/gem_provider_setup.png)
 
 <br clear="all" />
 

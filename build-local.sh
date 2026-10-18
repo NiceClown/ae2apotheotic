@@ -78,11 +78,10 @@ rm -f "$JAR"
 "$JDK/bin/jar.exe" --create --file "$(cygpath -w "$JAR")" -C "$(cygpath -w "$CLASSES")" .
 echo "Built: $JAR"
 
-for inst in "$PRISM/instances/All the Mods 11 - ATM11" "$PRISM/instances/All the Mods 11 - ATM11(1)"; do
-  if [[ -d "$inst/minecraft/mods" ]]; then
-    rm -f "$inst/minecraft/mods/$MOD_ID"-*.jar
-    cp "$JAR" "$inst/minecraft/mods/$MOD_ID-$MOD_VERSION.jar"
-    echo "Copied to: $inst/minecraft/mods/$MOD_ID-$MOD_VERSION.jar"
-  fi
-done
+TEST_CLIENT="/d/ai2/test-client"
+if [[ -d "$TEST_CLIENT/mods" ]]; then
+  rm -f "$TEST_CLIENT/mods/$MOD_ID"-*.jar
+  cp "$JAR" "$TEST_CLIENT/mods/$MOD_ID-$MOD_VERSION.jar"
+  echo "Copied to: $TEST_CLIENT/mods/$MOD_ID-$MOD_VERSION.jar"
+fi
 

@@ -1,4 +1,4 @@
----
+﻿---
 navigation:
   parent: index.md
   title: Кодировщик шаблонов
@@ -32,7 +32,7 @@ item_ids:
 
 <br clear="all" />
 
-![Кодировщик шаблонов в работе](assets/encoder_setup.jpg)
+![Кодировщик шаблонов в работе](assets/encoder_setup.png)
 
 <br clear="all" />
 

@@ -1,4 +1,4 @@
----
+﻿---
 navigation:
   parent: ae2apotheotic/index.md
   title: Pattern Encoder
@@ -32,7 +32,7 @@ The interface is widened to 210px for clean, readable recipe details and contain
 
 <br clear="all" />
 
-![Pattern Encoder in Action](assets/encoder_setup.jpg)
+![Pattern Encoder in Action](assets/encoder_setup.png)
 
 <br clear="all" />
 

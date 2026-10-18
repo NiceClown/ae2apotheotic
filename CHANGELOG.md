@@ -29,6 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     * Clicking `?` opens the exact GuideME manual page for that machine directly.
     * Pressing the GuideME hotkey (`G`) while hovering over any block or pattern in inventories or JEI/REI immediately navigates to its guide page.
 
+### Fixed
+* **GuideME Image Format & Real In-Game Visuals:**
+  * Fixed guide illustrations displaying as purple/black missing-texture placeholders caused by JPEG format incompatibility in Minecraft/NeoForge's `NativeImage` loader (which strictly requires PNG).
+  * Replaced all conceptual art with real, authentic in-game screenshots captured via an automated test client run showing actual blocks, cables, tables, and lighting in working functional configurations.
+  * Optimized all screenshot assets to lightweight high-resolution PNGs (~130–190 KB each), significantly reducing the compiled JAR file size while preserving crystal-clear pixel art quality.
+
 ---
 
 ## [1.2.0] - 2026-10-18

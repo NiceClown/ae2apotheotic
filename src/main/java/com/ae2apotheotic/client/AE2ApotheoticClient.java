@@ -11,6 +11,7 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 public final class AE2ApotheoticClient {
     public AE2ApotheoticClient(IEventBus modBus) {
         modBus.addListener(AE2ApotheoticClient::registerScreens);
+        GuideScreenshotCapture.init();
     }
 
     private static void registerScreens(RegisterMenuScreensEvent event) {

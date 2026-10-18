@@ -1,4 +1,4 @@
----
+﻿---
 navigation:
   parent: index.md
   title: Поставщик шаблонов инфузии
@@ -32,7 +32,7 @@ item_ids:
 
 <br clear="all" />
 
-![Установка поставщика инфузии](assets/infusion_provider_setup.jpg)
+![Установка поставщика инфузии](assets/infusion_provider_setup.png)
 
 <br clear="all" />
 
