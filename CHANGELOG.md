@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.0] - 2026-10-18
+
+### Added
+* **Integrated GuideME In-Game Guidebook:**
+  * Added complete, comprehensive in-game guidebook documentation powered by **GuideME** (the official AE2 guidebook engine).
+  * Seamlessly integrated into the AE2 Guidebook (`ae2:guide`) with a dedicated top-level **"Apotheotic Automation"** chapter and cross-listings in the standard **Machines** category.
+  * **Full English and Russian Localizations:** Every guide page is natively available in both English (`en_us`) and Russian (`ru_ru`), dynamically selected according to player language settings.
+  * **Interactive 3D Block Models & Visual Illustrations:**
+    * Live interactive 3D block model previews rendered on each page (`<BlockImage ... />`).
+    * Clear isometric 3D render illustrations showing proper block placement, machine adjacencies, ME cable hookups, and automation pipelines.
+    * Full crafting recipe previews (`<RecipeFor ... />`) and item tag links (`<ItemLink ... />`, `<ItemImage ... />`).
+  * **Dedicated In-Game Guide Pages:**
+    * **Overview (`index.md`):** Architecture, features, and quick navigation.
+    * **Apotheotic Pattern Encoder (`pattern_encoder.md`):** Complete walkthrough of all 3 encoding modes (Gem Upgrades, Gem Crushing, Table Infusion), Shift+Encode chain generation, and infusion stat calculator.
+    * **Apotheotic Gem Pattern Provider (`gem_pattern_provider.md`):** Physical setup with the Gem Case, the new categorized UI, purity tier slots, Category 0, and smart shift-click routing.
+    * **Apotheotic Infusion Pattern Provider (`infusion_pattern_provider.md`):** Setup with Raven's vs standard tables, 3-tier liquid XP extraction priority (ME Network fluid storage -> Internal buffer -> Adjacent tanks), and atomic transactions.
+    * **Specialized Patterns (`patterns.md`):** Deep dive into the three pattern cards, data payloads, clearing, and reuse.
+  * **Interactive `?` Help Buttons in GUIs:**
+    * Added a dedicated `?` button to the top-right corner of all machine screens (Encoder and Providers).
+    * Clicking `?` opens the exact GuideME manual page for that machine directly.
+    * Pressing the GuideME hotkey (`G`) while hovering over any block or pattern in inventories or JEI/REI immediately navigates to its guide page.
+
+---
+
 ## [1.2.0] - 2026-10-18
 
 ### Added

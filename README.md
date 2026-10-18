@@ -29,7 +29,7 @@ An addon for **Applied Energistics 2** that connects AE2 autocrafting directly t
 | Block | Visual Style | Capacity | Purpose |
 | :--- | :--- | :--- | :--- |
 | **Apotheotic Pattern Encoder** | Industrial AE2 terminal chassis with cyan screen and violet Fluix runes | 1 Sample, 1 Blank, 1 Output | Encodes specialized autocrafting patterns of all three types |
-| **Apotheotic Gem Pattern Provider** | AE2 machine casing with brass gem sockets (Ruby, Sapphire, Emerald, Amethyst) | 27 Pattern Slots (9x3 grid) | Connects directly to an adjacent Gem Case |
+| **Apotheotic Gem Pattern Provider** | AE2 machine casing with brass gem sockets (Ruby, Sapphire, Emerald, Amethyst) | Categorized UI (Tiers I–V + Dust per gem) | Connects directly to an adjacent Gem Case |
 | **Apotheotic Infusion Pattern Provider** | AE2 machine casing with violet runes and illuminated liquid XP tube | 9 Pattern Slots | Connects directly to an adjacent Enchanting Table |
 
 Pattern Providers act as full ME network nodes:
@@ -37,6 +37,16 @@ Pattern Providers act as full ME network nodes:
 * Can be connected by cable or placed against dense/normal cables and other ME blocks on any side.
 * Pattern slots are directly visible and accessible through the **ME Pattern Access Terminal**.
 * Addon patterns function exclusively in their designated providers (standard AE2 ME Pattern Providers will ignore them).
+
+---
+
+## In-Game Guidebook (GuideME)
+
+The addon includes comprehensive in-game documentation powered by **GuideME**:
+* Open the **AE2 Guide** item (`ae2:guide`) to access the dedicated **"Apotheotic Automation"** chapter with live 3D block models, setup illustrations, and recipes.
+* Click the **`?`** button in the top-right corner of any machine interface to open its manual page immediately.
+* Hover over any block or pattern card in your inventory, JEI, REI, or EMI and press the Guide key (**`G`**) to jump directly to its guide page.
+* Fully localized in both **English** and **Russian**.
 
 ---
 
@@ -124,7 +134,7 @@ Using Git Bash and Prism Launcher dependencies:
 ```bash
 ./build-local.sh
 ```
-Compiles against JDK 25 and NeoForge/Minecraft libraries, outputting `build/libs/ae2apotheotic-1.2.0.jar` and automatically updating local Prism instances.
+Compiles against JDK 25 and NeoForge/Minecraft libraries, outputting `build/libs/ae2apotheotic-2.0.0.jar` and automatically updating local Prism instances.
 
 ### Gradle Build
 Standard ModDevGradle configuration is included in `build.gradle` and `settings.gradle`.

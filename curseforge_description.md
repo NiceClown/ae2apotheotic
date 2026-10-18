@@ -21,6 +21,16 @@ An addon for **Applied Energistics 2** that connects AE2 autocrafting directly t
 
 ---
 
+## In-Game Guidebook (GuideME)
+
+The addon includes full in-game documentation powered by **GuideME**:
+* Open the **AE2 Guide** (`ae2:guide`) to access the **"Apotheotic Automation"** chapter with live 3D models, setups, and recipes;
+* Click the **`?`** button in the top-right corner of any machine GUI to open its manual page immediately;
+* Hover over any block or pattern in inventory or JEI/REI and press **`G`** to jump directly to its guide;
+* Fully translated in **English** and **Russian**.
+
+---
+
 ## Blocks
 
 | Block | Visual Style | Capacity | Purpose |

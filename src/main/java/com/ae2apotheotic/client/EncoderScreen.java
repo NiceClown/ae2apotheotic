@@ -45,6 +45,7 @@ public class EncoderScreen extends FlatScreen<EncoderMenu> {
     @Override
     protected void init() {
         super.init();
+        addGuideButton("ae2apotheotic/pattern_encoder.md");
         String[] modes = { "upgrade", "crush", "infusion" };
         for (int i = 0; i < 3; i++) {
             int mode = i;

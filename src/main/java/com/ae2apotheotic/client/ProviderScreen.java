@@ -40,6 +40,7 @@ public class ProviderScreen extends FlatScreen<ProviderMenu> {
         super.init();
         xpButtons.clear();
         if (menu.isInfusion()) {
+            addGuideButton("ae2apotheotic/infusion_pattern_provider.md");
             xpButtons.add(button(70, 72, 32, 12, Component.translatable("gui.ae2apotheotic.xp.deposit_level"),
                 Component.translatable("gui.ae2apotheotic.xp.deposit_level.tooltip"), b -> sendButton(ProviderMenu.BUTTON_DEPOSIT_LEVEL)));
             xpButtons.add(button(104, 72, 32, 12, Component.translatable("gui.ae2apotheotic.xp.deposit_all"),
@@ -47,6 +48,7 @@ public class ProviderScreen extends FlatScreen<ProviderMenu> {
             xpButtons.add(button(138, 72, 32, 12, Component.translatable("gui.ae2apotheotic.xp.withdraw"),
                 Component.translatable("gui.ae2apotheotic.xp.withdraw.tooltip"), b -> sendButton(ProviderMenu.BUTTON_WITHDRAW_ALL)));
         } else {
+            addGuideButton("ae2apotheotic/gem_pattern_provider.md");
             // Initialize page to the selected category
             int cat = menu.getSelectedCategory();
             gemPage = cat / GEMS_PER_PAGE;
@@ -102,7 +104,7 @@ public class ProviderScreen extends FlatScreen<ProviderMenu> {
         } else {
             // Gem Provider: Network status on top right
             Component netComp = Component.translatable(online ? "gui.ae2apotheotic.online" : "gui.ae2apotheotic.offline");
-            g.text(font, netComp, 202 - font.width(netComp), 6, online ? TEXT_GREEN : TEXT_RED, false);
+            g.text(font, netComp, 190 - font.width(netComp), 6, online ? TEXT_GREEN : TEXT_RED, false);
 
             // Gem Case status at y = 17
             boolean hasCase = (flags & GemProviderBlockEntity.FLAG_GEM_CASE) != 0;

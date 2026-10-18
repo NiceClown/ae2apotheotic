@@ -103,5 +103,8 @@
   "gui.ae2apotheotic.tier.3": "Tier III: Flawed → Normal",
   "gui.ae2apotheotic.tier.4": "Tier IV: Normal → Flawless",
   "gui.ae2apotheotic.tier.5": "Tier V: Flawless → Perfect",
-  "gui.ae2apotheotic.tier.crush": "Crush to Dust"
+  "gui.ae2apotheotic.tier.crush": "Crush to Dust",
+
+  "item.ae2apotheotic.guide": "Apotheotic Automation Guide",
+  "gui.ae2apotheotic.guide.tooltip": "Open GuideME Manual"
 }

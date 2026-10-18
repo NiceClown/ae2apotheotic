@@ -103,5 +103,8 @@
   "gui.ae2apotheotic.tier.3": "Тир III: С изъяном → Обычный",
   "gui.ae2apotheotic.tier.4": "Тир IV: Обычный → Безупречный",
   "gui.ae2apotheotic.tier.5": "Тир V: Безупречный → Идеальный",
-  "gui.ae2apotheotic.tier.crush": "Измельчение в пыль"
+  "gui.ae2apotheotic.tier.crush": "Измельчение в пыль",
+
+  "item.ae2apotheotic.guide": "Руководство по автоматизации",
+  "gui.ae2apotheotic.guide.tooltip": "Открыть руководство GuideME"
 }

@@ -1,10 +1,14 @@
 package com.ae2apotheotic.client;
 
+import appeng.items.tools.GuideItem;
+import guideme.GuidesCommon;
+import guideme.PageAnchor;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
@@ -41,6 +45,20 @@ abstract class FlatScreen<T extends AbstractContainerMenu> extends AbstractConta
 
     protected boolean shiftDown() {
         return minecraft != null && minecraft.hasShiftDown();
+    }
+
+    protected void addGuideButton(String page) {
+        button(imageWidth - 17, 4, 12, 11, Component.literal("?"), Component.translatable("gui.ae2apotheotic.guide.tooltip"), b -> {
+            try {
+                if (minecraft != null && minecraft.player != null) {
+                    GuidesCommon.openGuide(
+                        minecraft.player,
+                        GuideItem.GUIDE_ID,
+                        PageAnchor.page(Identifier.fromNamespaceAndPath("ae2", page))
+                    );
+                }
+            } catch (Throwable ignored) {}
+        });
     }
 
     @Override
