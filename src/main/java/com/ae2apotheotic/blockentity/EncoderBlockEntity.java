@@ -172,6 +172,11 @@ public class EncoderBlockEntity extends BlockEntity implements InternalInventory
         return crushMode;
     }
 
+    public void setCrushMode(int mode) {
+        crushMode = Mth.clamp(mode, 0, 2);
+        changed();
+    }
+
     public void cycleCrushMode() {
         crushMode = (crushMode + 1) % 3;
         changed();

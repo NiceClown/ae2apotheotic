@@ -84,13 +84,25 @@ public final class EncoderLogic {
     /** Moves the purity selector, keeping it inside the range that makes sense for the current mode and sample. */
     public static void stepPurity(EncoderBlockEntity encoder, int delta) {
         UnsocketedGem gem = UnsocketedGem.of(encoder.getSample());
+        Purity[] range = purityRange(encoder);
+        Purity current = resolvePurity(encoder, gem.isValid() ? gem.purity() : null, range[0], range[1]);
+        encoder.setPurity(Mth.clamp(current.ordinal() + delta, range[0].ordinal(), range[1].ordinal()));
+    }
+
+    /** Selects a purity directly (clamped to what the current mode and sample allow). */
+    public static void setPurity(EncoderBlockEntity encoder, int ordinal) {
+        Purity[] range = purityRange(encoder);
+        encoder.setPurity(Mth.clamp(ordinal, range[0].ordinal(), range[1].ordinal()));
+    }
+
+    /** {min, max} purity the selector may take in the current mode. */
+    public static Purity[] purityRange(EncoderBlockEntity encoder) {
+        UnsocketedGem gem = UnsocketedGem.of(encoder.getSample());
         boolean useGem = gem.isValid() && !(encoder.getMode() == EncoderBlockEntity.MODE_CRUSH
             && GemCrushEncoding.CrushMode.byId(encoder.getCrushMode()) != GemCrushEncoding.CrushMode.EXACT);
         Purity min = useGem ? gem.gem().get().getMinPurity() : Purity.CRACKED;
         Purity max = encoder.getMode() == EncoderBlockEntity.MODE_UPGRADE ? Purity.FLAWLESS : Purity.PERFECT;
-        Purity current = resolvePurity(encoder, gem.isValid() ? gem.purity() : null, min, max);
-        int next = Mth.clamp(current.ordinal() + delta, min.ordinal(), Math.max(min.ordinal(), max.ordinal()));
-        encoder.setPurity(next);
+        return new Purity[] { min, max.ordinal() < min.ordinal() ? min : max };
     }
 
     // ------------------------------------------------------------------------------------------------------------

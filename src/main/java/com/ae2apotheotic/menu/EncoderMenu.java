@@ -6,6 +6,7 @@ import com.ae2apotheotic.blockentity.EncoderBlockEntity;
 import com.ae2apotheotic.encoder.EncoderLogic;
 import com.ae2apotheotic.encoder.EncoderStatus;
 import com.ae2apotheotic.registry.ModRegistry;
+import dev.shadowsoffire.apotheosis.socket.gem.Purity;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -39,6 +40,12 @@ public class EncoderMenu extends AbstractContainerMenu {
     public static final int BTN_ENCODE = 50;
     /** Upgrade mode only: encode every purity step up to Perfect, the patterns go to the player's inventory. */
     public static final int BTN_ENCODE_CHAIN = 51;
+    /** {@code BTN_PURITY_SET + ordinal} picks a purity directly. */
+    public static final int BTN_PURITY_SET = 60;
+    /** {@code BTN_CRUSH_SET + mode} picks a crushing mode directly. */
+    public static final int BTN_CRUSH_SET = 70;
+    /** {@code BTN_STAT_SET + stat * 101 + value} sets eterna (0), quanta (1) or arcana (2) to 0..100. */
+    public static final int BTN_STAT_SET = 100;
 
     // ---- synced values ----
     public static final int D_MODE = 0;
@@ -63,13 +70,15 @@ public class EncoderMenu extends AbstractContainerMenu {
     public static final int D_XP_COST = 19; // + 20
     public static final int D_PLAYER_MAX_ETERNA = 21;
     public static final int D_CAN_ENCODE = 22;
-    private static final int D_SIZE = 23;
+    public static final int D_PURITY_MIN = 23;
+    public static final int D_PURITY_MAX = 24;
+    private static final int D_SIZE = 25;
 
     public static final int SLOT_SAMPLE = 0;
     public static final int SLOT_BLANK = 1;
     public static final int SLOT_OUTPUT = 2;
     private static final int MACHINE_SLOTS = 3;
-    private static final int DISPLAY_SLOTS = 5;
+    private static final int DISPLAY_SLOTS = 6;
     private static final int PLAYER_START = MACHINE_SLOTS + DISPLAY_SLOTS;
     private static final int PLAYER_END = PLAYER_START + 36;
 
@@ -100,20 +109,21 @@ public class EncoderMenu extends AbstractContainerMenu {
         this.player = inventory.player;
         this.pos = pos;
 
-        addSlot(new Slots.Filtered(machine, EncoderBlockEntity.SLOT_SAMPLE, 8, 40,
+        addSlot(new Slots.Filtered(machine, EncoderBlockEntity.SLOT_SAMPLE, 14, 40,
             s -> EncoderBlockEntity.isValidForSlot(EncoderBlockEntity.SLOT_SAMPLE, s), 1));
-        addSlot(new Slots.Filtered(machine, EncoderBlockEntity.SLOT_BLANK, 24, 122,
+        addSlot(new Slots.Filtered(machine, EncoderBlockEntity.SLOT_BLANK, 24, 133,
             s -> EncoderBlockEntity.isValidForSlot(EncoderBlockEntity.SLOT_BLANK, s), 64));
-        addSlot(new Slots.Filtered(machine, EncoderBlockEntity.SLOT_OUTPUT, 168, 122,
+        addSlot(new Slots.Filtered(machine, EncoderBlockEntity.SLOT_OUTPUT, 168, 133,
             s -> EncoderBlockEntity.isValidForSlot(EncoderBlockEntity.SLOT_OUTPUT, s), 1));
 
-        addSlot(new Slots.Display(preview, PREVIEW_INPUT, 36, 66, () -> mode() != EncoderBlockEntity.MODE_INFUSION));
-        addSlot(new Slots.Display(preview, PREVIEW_LEFT, 72, 66, () -> mode() == EncoderBlockEntity.MODE_UPGRADE));
-        addSlot(new Slots.Display(preview, PREVIEW_RIGHT, 108, 66, () -> mode() == EncoderBlockEntity.MODE_UPGRADE));
-        addSlot(new Slots.Display(preview, PREVIEW_RIGHT, 136, 66, () -> mode() == EncoderBlockEntity.MODE_INFUSION));
-        addSlot(new Slots.Display(preview, PREVIEW_RESULT, 156, 66, () -> true));
+        addSlot(new Slots.Display(preview, PREVIEW_INPUT, 44, 66, () -> mode() != EncoderBlockEntity.MODE_INFUSION));
+        addSlot(new Slots.Display(preview, PREVIEW_LEFT, 78, 66, () -> mode() == EncoderBlockEntity.MODE_UPGRADE));
+        addSlot(new Slots.Display(preview, PREVIEW_RIGHT, 112, 66, () -> mode() == EncoderBlockEntity.MODE_UPGRADE));
+        addSlot(new Slots.Display(preview, PREVIEW_RIGHT, 158, 40, () -> mode() == EncoderBlockEntity.MODE_INFUSION));
+        addSlot(new Slots.Display(preview, PREVIEW_RESULT, 176, 66, () -> mode() != EncoderBlockEntity.MODE_INFUSION));
+        addSlot(new Slots.Display(preview, PREVIEW_RESULT, 182, 40, () -> mode() == EncoderBlockEntity.MODE_INFUSION));
 
-        addStandardInventorySlots(inventory, 24, 154);
+        addStandardInventorySlots(inventory, 24, 166);
         addDataSlots(data);
         refresh();
     }
@@ -150,6 +160,9 @@ public class EncoderMenu extends AbstractContainerMenu {
         data.set(D_XP_COST + 1, (view.xpCost >>> 16) & 0xFFFF);
         data.set(D_PLAYER_MAX_ETERNA, view.playerMaxEterna);
         data.set(D_CAN_ENCODE, canEncode(view) ? 1 : 0);
+        Purity[] range = EncoderLogic.purityRange(encoder);
+        data.set(D_PURITY_MIN, range[0].ordinal());
+        data.set(D_PURITY_MAX, range[1].ordinal());
         preview.setItem(PREVIEW_INPUT, view.previewInput);
         preview.setItem(PREVIEW_LEFT, view.previewLeft);
         preview.setItem(PREVIEW_RIGHT, view.previewRight);
@@ -212,6 +225,14 @@ public class EncoderMenu extends AbstractContainerMenu {
             encode();
         } else if (id == BTN_ENCODE_CHAIN) {
             encodeChain(player);
+        } else if (id >= BTN_PURITY_SET && id < BTN_PURITY_SET + 6) {
+            EncoderLogic.setPurity(encoder, id - BTN_PURITY_SET);
+        } else if (id >= BTN_CRUSH_SET && id < BTN_CRUSH_SET + 3) {
+            encoder.setCrushMode(id - BTN_CRUSH_SET);
+        } else if (id >= BTN_STAT_SET && id < BTN_STAT_SET + 3 * 101) {
+            int stat = (id - BTN_STAT_SET) / 101;
+            int value = (id - BTN_STAT_SET) % 101;
+            encoder.setStats(stat == 0 ? value : encoder.getEterna(), stat == 1 ? value : encoder.getQuanta(), stat == 2 ? value : encoder.getArcana());
         } else {
             return false;
         }
