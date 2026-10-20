@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.0] - 2026-10-20
+
+### Changed
+* **Gem Pattern Provider rebuilt:**
+  * Patterns are now stored by **gem id** instead of the position of the gem in the sorted gem list. Adding or removing gems (datapacks, addons) no longer moves patterns into wrong categories, and there is no limit of 63 gems any more.
+  * New GUI: search box, "All / In use" filter, scrollable 9×3 gem grid with fill bars, ghost previews in empty tier slots, crossed-out tiers below a gem's minimum purity, compact status indicators.
+  * **Bulk Crushing** category now has **27** slots (was 6) for any crushing pattern; each gem keeps its own Dust slot for "this gem" crushing patterns.
+  * The provider is no longer listed in the ME Pattern Access Terminal (its patterns are sorted by gem); the block tooltip and the GUI explain this.
+  * Old saves are migrated automatically on the first tick (patterns that do not fit anywhere are dropped next to the block).
+* **Pattern Encoder GUI redesigned:** icon tabs, a dark terminal-style display, clickable purity chips, `input + A + B ⇒ result` recipe line, segmented crushing-mode selector, Eterna / Quanta / Arcana bars with the accepted range highlighted (click the bar to set a value), colored status bar.
+* Long texts in all GUIs are shrunk to fit and long tooltips are word-wrapped.
+
+### Fixed
+* Infusion Pattern Provider could lose experience taken from the ME network when the adjacent tanks could not cover the rest of the cost. Network experience now goes through the internal buffer first.
+* The guide screenshot tool (`/ae2apotheotic capture`, which edits the world and clears the inventory) was active for every player. It is now only enabled with `-Dae2apotheotic.devTools=true`.
+
+---
+
 ## [2.0.0] - 2026-10-18
 
 ### Added

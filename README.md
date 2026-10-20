@@ -68,14 +68,14 @@ The Gem Pattern Provider automatically places the two gems and materials directl
 
 ### Categorized Gem Pattern Provider Interface
 The Gem Pattern Provider features a clean, categorized architecture organized per gem:
-* **Gem Category Strip:** Top selector showing 8 gems per page with `<` and `>` paging arrows, progress badges, and page numbers.
-* **Category View:** Shows the current gem icon, localized name, installed tier count, and prev/next cycling arrows.
+* **Search + Gem Grid:** a searchable 9×3 grid (with scrollbar and an "In use" filter) listing Bulk Crushing and every gem; a bar under each icon shows how many slots are filled.
 * **Tier Slots (I to V + Dust):**
-  * Tiers I–V: Slots strictly accept the upgrade pattern for that gem (Cracked→Chipped up to Flawless→Perfect).
-  * Dust Slot: Dedicated slot for crushing this specific gem into dust.
-* **General Crushing:** Category 0 accommodates general crushing patterns.
-* **Smart Auto-Routing:** Shift-clicking any pattern card automatically identifies the gem and tier, inserts it into the designated slot, and flips the category view directly to that gem.
-* **ME Pattern Terminal Integration:** Slot-level validation is maintained across both manual insertion and remote access via ME Pattern Access Terminals.
+  * Tiers I–V accept only the upgrade pattern of that gem and step (Cracked→Chipped up to Flawless→Perfect); steps below the gem's minimum purity are crossed out.
+  * Dust slot: crushing exactly this gem.
+* **Bulk Crushing:** 27 slots for any crushing pattern.
+* **Smart Auto-Routing:** Shift-clicking a pattern in your inventory puts it into its slot and opens that category.
+* Patterns are stored by gem id, so adding/removing gems never moves them. Old saves are sorted in automatically.
+* Because of this layout the Gem Pattern Provider is **not** shown in the ME Pattern Access Terminal.
 
 ### 2. Gem Dust (Crushing)
 Crushes gems into gem dust. Autocrafting guarantees the minimum threshold matching native Apotheosis salvaging recipes:
