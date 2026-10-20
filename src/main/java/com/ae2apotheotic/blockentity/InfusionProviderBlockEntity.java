@@ -266,35 +266,30 @@ public class InfusionProviderBlockEntity extends AbstractProviderBlockEntity {
             return false;
         }
 
-        // 1. ME Network FIRST
+        // 1. ME network first. The extracted experience goes through the buffer, so if the adjacent tanks
+        // cannot cover the rest nothing is lost: it simply stays in the buffer for the next attempt.
         if (netSim > 0) {
-            long wantNet = Math.min(netSim, needMb);
-            long pulled = pullFromNetwork(wantNet, false);
-            needMb -= pulled;
-            if (needMb <= 0) {
-                return true;
-            }
+            storedXpMb += pullFromNetwork(Math.min(netSim, needMb), false);
+            setChanged();
         }
 
-        // 2. Next: internal buffer
-        long fromBuffer = Math.min(storedXpMb, needMb);
-        long deficitAfterBuffer = needMb - fromBuffer;
-
-        if (deficitAfterBuffer <= 0) {
-            storedXpMb -= fromBuffer;
+        // 2. Internal buffer
+        if (storedXpMb >= needMb) {
+            storedXpMb -= needMb;
             setChanged();
             return true;
         }
 
-        // 3. Next: adjacent tanks
-        long request = (deficitAfterBuffer + XpHelper.MB_PER_XP - 1) / XpHelper.MB_PER_XP * XpHelper.MB_PER_XP;
+        // 3. Adjacent tanks (whole points only, so ask for a multiple of 20 mB)
+        long deficit = needMb - storedXpMb;
+        long request = (deficit + XpHelper.MB_PER_XP - 1) / XpHelper.MB_PER_XP * XpHelper.MB_PER_XP;
         try (Transaction tx = Transaction.openRoot()) {
             long pulled = pullFromNeighbors(request, tx);
-            if (pulled < deficitAfterBuffer) {
+            if (pulled < deficit) {
                 return false;
             }
             tx.commit();
-            storedXpMb = storedXpMb - fromBuffer + pulled - deficitAfterBuffer;
+            storedXpMb = storedXpMb + pulled - needMb;
         }
         setChanged();
         return true;
