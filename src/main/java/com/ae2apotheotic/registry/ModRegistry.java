@@ -8,7 +8,9 @@ import com.ae2apotheotic.block.ProviderBlock;
 import com.ae2apotheotic.blockentity.EncoderBlockEntity;
 import com.ae2apotheotic.blockentity.GemProviderBlockEntity;
 import com.ae2apotheotic.blockentity.InfusionProviderBlockEntity;
+import com.ae2apotheotic.item.InfoBlockItem;
 import com.ae2apotheotic.menu.EncoderMenu;
+import com.ae2apotheotic.menu.GemProviderMenu;
 import com.ae2apotheotic.menu.ProviderMenu;
 import com.ae2apotheotic.pattern.GemCrushEncoding;
 import com.ae2apotheotic.pattern.GemCrushPattern;
@@ -65,7 +67,8 @@ public final class ModRegistry {
 
     // ---- Items ----
     public static final DeferredItem<BlockItem> PATTERN_ENCODER_ITEM = ITEMS.registerSimpleBlockItem(PATTERN_ENCODER);
-    public static final DeferredItem<BlockItem> GEM_PROVIDER_ITEM = ITEMS.registerSimpleBlockItem(GEM_PROVIDER);
+    public static final DeferredItem<BlockItem> GEM_PROVIDER_ITEM = ITEMS.registerItem("gem_pattern_provider",
+        p -> new InfoBlockItem(GEM_PROVIDER.get(), p.useBlockDescriptionPrefix(), "tooltip.ae2apotheotic.gem_provider.info"));
     public static final DeferredItem<BlockItem> INFUSION_PROVIDER_ITEM = ITEMS.registerSimpleBlockItem(INFUSION_PROVIDER);
 
     public static final DeferredItem<Item> GEM_UPGRADE_PATTERN = ITEMS.registerItem(
@@ -88,6 +91,8 @@ public final class ModRegistry {
         "pattern_encoder", () -> IMenuTypeExtension.create(EncoderMenu::fromNetwork));
     public static final DeferredHolder<MenuType<?>, MenuType<ProviderMenu>> PROVIDER_MENU = MENUS.register(
         "pattern_provider", () -> IMenuTypeExtension.create(ProviderMenu::fromNetwork));
+    public static final DeferredHolder<MenuType<?>, MenuType<GemProviderMenu>> GEM_PROVIDER_MENU = MENUS.register(
+        "gem_pattern_provider", () -> IMenuTypeExtension.create(GemProviderMenu::fromNetwork));
 
     // ---- Creative tab ----
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> TAB = TABS.register("main", () -> CreativeModeTab.builder()

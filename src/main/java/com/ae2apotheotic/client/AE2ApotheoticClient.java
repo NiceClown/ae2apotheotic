@@ -11,11 +11,16 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 public final class AE2ApotheoticClient {
     public AE2ApotheoticClient(IEventBus modBus) {
         modBus.addListener(AE2ApotheoticClient::registerScreens);
-        GuideScreenshotCapture.init();
+        // Developer tool that rebuilds the guide screenshots. It edits the world and clears the inventory, so it is
+        // only available when the game is started with -Dae2apotheotic.devTools=true (or the auto-capture flag).
+        if (Boolean.getBoolean("ae2apotheotic.devTools") || Boolean.getBoolean("ae2apotheotic.autoCapture")) {
+            GuideScreenshotCapture.init();
+        }
     }
 
     private static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(ModRegistry.ENCODER_MENU.get(), EncoderScreen::new);
         event.register(ModRegistry.PROVIDER_MENU.get(), ProviderScreen::new);
+        event.register(ModRegistry.GEM_PROVIDER_MENU.get(), GemProviderScreen::new);
     }
 }

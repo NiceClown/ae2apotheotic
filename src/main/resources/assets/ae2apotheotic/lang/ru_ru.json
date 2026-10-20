@@ -106,5 +106,26 @@
   "gui.ae2apotheotic.tier.crush": "Измельчение в пыль",
 
   "item.ae2apotheotic.guide": "Руководство по автоматизации",
-  "gui.ae2apotheotic.guide.tooltip": "Открыть руководство GuideME"
+  "gui.ae2apotheotic.guide.tooltip": "Открыть руководство GuideME",
+
+  "gui.ae2apotheotic.sample": "Образец",
+  "gui.ae2apotheotic.chain_hint": "Shift + Записать: вся цепочка до Идеальной",
+  "gui.ae2apotheotic.crush_mode.short.exact": "Этот",
+  "gui.ae2apotheotic.crush_mode.short.same_purity": "Чистота",
+  "gui.ae2apotheotic.crush_mode.short.any": "Любой",
+  "gui.ae2apotheotic.infusion.hint": "Положите предмет для инфузии в слот образца",
+  "gui.ae2apotheotic.stat.bar": "%s, допустимо по рецепту: %s. Кликните по шкале, чтобы задать значение.",
+  "gui.ae2apotheotic.encode.chain": "Записать цепочку",
+  "gui.ae2apotheotic.category.bulk": "Массовое дробление",
+  "gui.ae2apotheotic.category.patterns": "Шаблонов: %s / %s",
+  "gui.ae2apotheotic.search": "Поиск самоцвета...",
+  "gui.ae2apotheotic.search.none": "Ничего не найдено",
+  "gui.ae2apotheotic.filter.all": "Все",
+  "gui.ae2apotheotic.filter.used": "Занятые",
+  "gui.ae2apotheotic.filter.tooltip": "Показывать все самоцветы или только те, где уже есть шаблоны",
+  "gui.ae2apotheotic.gem_provider.hint": "Shift+клик по шаблону в инвентаре — разложит сам",
+  "gui.ae2apotheotic.gem_provider.terminal_info": "Этот поставщик не показывается в терминале доступа к шаблонам: его шаблоны разложены по самоцветам и ступеням чистоты, управляйте ими здесь. Шаблоны улучшения попадают к своему самоцвету, дробление «только этот самоцвет» — в его слот пыли, остальное дробление — в «Массовое дробление».",
+  "gui.ae2apotheotic.tier.dust_short": "Пыль",
+  "gui.ae2apotheotic.tier.locked": "Этот самоцвет начинается с чистоты «%s», такой ступени у него нет",
+  "tooltip.ae2apotheotic.gem_provider.info": "Не показывается в терминале доступа к шаблонам — шаблоны настраиваются в его собственном окне"
 }

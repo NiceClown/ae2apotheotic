@@ -1,7 +1,6 @@
 package com.ae2apotheotic.block;
 
 import com.ae2apotheotic.blockentity.AbstractProviderBlockEntity;
-import com.ae2apotheotic.blockentity.InfusionProviderBlockEntity;
 import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
@@ -31,11 +30,7 @@ public class ProviderBlock extends Block implements EntityBlock {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof AbstractProviderBlockEntity provider) {
-            player.openMenu(provider, buf -> {
-                buf.writeBlockPos(pos);
-                buf.writeBoolean(provider instanceof InfusionProviderBlockEntity);
-                buf.writeInt(provider.getPatternSlots());
-            });
+            player.openMenu(provider, provider::writeMenuData);
         }
         return InteractionResult.SUCCESS;
     }

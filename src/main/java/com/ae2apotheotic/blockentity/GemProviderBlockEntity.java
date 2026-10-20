@@ -1,10 +1,12 @@
 package com.ae2apotheotic.blockentity;
 
 import appeng.api.crafting.IPatternDetails;
+import appeng.api.inventories.InternalInventory;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.GenericStack;
 import appeng.api.stacks.KeyCounter;
+import com.ae2apotheotic.menu.GemProviderMenu;
 import com.ae2apotheotic.pattern.GemCrushEncoding;
 import com.ae2apotheotic.pattern.GemCrushPattern;
 import com.ae2apotheotic.pattern.GemKeys;
@@ -14,6 +16,7 @@ import com.ae2apotheotic.registry.ModRegistry;
 import dev.shadowsoffire.apotheosis.Apoth;
 import dev.shadowsoffire.apotheosis.socket.gem.Gem;
 import dev.shadowsoffire.apotheosis.socket.gem.GemItem;
+import dev.shadowsoffire.apotheosis.socket.gem.GemRegistry;
 import dev.shadowsoffire.apotheosis.socket.gem.Purity;
 import dev.shadowsoffire.apotheosis.socket.gem.UnsocketedGem;
 import dev.shadowsoffire.apotheosis.socket.gem.cutting.GemCuttingMenu;
@@ -23,14 +26,25 @@ import dev.shadowsoffire.apotheosis.socket.gem.storage.GemCaseTile;
 import dev.shadowsoffire.placebo.cap.InternalItemHandler;
 import dev.shadowsoffire.placebo.dynreg.DynamicHolder;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -40,96 +54,175 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Pattern provider that works with an adjacent Apotheosis Gem Case.
- * Organized into categories (one for general crushing and one per registered gem),
- * each holding slots for each purity upgrade tier plus crushing.
+ * <p>
+ * Patterns are stored in categories: one per gem (keyed by the gem id, so adding or removing gems never moves
+ * patterns around) with a slot for each purity upgrade step plus one slot for crushing exactly that gem, and a
+ * "bulk crushing" category with {@link #BULK_SLOTS} free slots for any crushing pattern.
+ * <p>
+ * Because of this layout the provider is not listed in the ME Pattern Access Terminal.
  */
 public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
     public static final int FLAG_GEM_CASE = 1;
-    public static final int SLOTS_PER_CATEGORY = 6;
-    public static final int MAX_CATEGORIES = 64;
-    public static final int PATTERN_SLOTS = MAX_CATEGORIES * SLOTS_PER_CATEGORY;
+    /** Tiers 0..4 are the upgrades Cracked->Chipped ... Flawless->Perfect, tier 5 crushes this gem. */
+    public static final int SLOTS_PER_GEM = 6;
+    public static final int CRUSH_TIER = 5;
+    public static final int BULK_SLOTS = 27;
+    private static final int STORAGE_VERSION = 2;
 
-    private int selectedCategory = 1;
+    /** Gem id -> SLOTS_PER_GEM pattern stacks. */
+    private final Map<Identifier, ItemStack[]> gemPatterns = new TreeMap<>();
+    /** Patterns from an older save that still have to be sorted in (done on the first server tick). */
+    private final List<ItemStack> pendingMigration = new ArrayList<>();
+    /** Last category opened in the GUI: a gem id, or null for bulk crushing. */
+    private @Nullable Identifier lastCategory;
 
     public GemProviderBlockEntity(BlockPos pos, BlockState state) {
-        super(ModRegistry.GEM_PROVIDER_BE.get(), pos, state, PATTERN_SLOTS);
+        super(ModRegistry.GEM_PROVIDER_BE.get(), pos, state, BULK_SLOTS);
     }
 
-    public int getSelectedCategory() {
-        return selectedCategory;
+    // ------------------------------------------------------------------------------------------------------------
+    // Where a pattern belongs
+
+    /** Gem category + tier a pattern belongs to; null if it only fits into bulk crushing (or nowhere). */
+    public record Route(Identifier gem, int tier) {}
+
+    public static @Nullable Identifier gemId(Gem gem) {
+        return GemRegistry.INSTANCE.getKey(gem);
     }
 
-    public void setSelectedCategory(int category) {
-        this.selectedCategory = category;
-        setChanged();
+    public static @Nullable Route routeOf(ItemStack stack) {
+        if (stack.is(ModRegistry.GEM_UPGRADE_PATTERN.get())) {
+            GemUpgradeEncoding enc = stack.get(ModRegistry.GEM_UPGRADE.get());
+            if (enc == null) {
+                return null;
+            }
+            UnsocketedGem gem = UnsocketedGem.of(enc.input().toStack());
+            if (!gem.isValid() || gem.isPerfect()) {
+                return null;
+            }
+            Identifier id = gemId(gem.gem().get());
+            return id == null ? null : new Route(id, gem.purity().ordinal());
+        }
+        if (stack.is(ModRegistry.GEM_CRUSH_PATTERN.get())) {
+            GemCrushEncoding enc = stack.get(ModRegistry.GEM_CRUSH.get());
+            if (enc == null || enc.mode() != GemCrushEncoding.CrushMode.EXACT || enc.gem().isEmpty()) {
+                return null;
+            }
+            UnsocketedGem gem = UnsocketedGem.of(enc.gem().get().toStack());
+            if (!gem.isValid()) {
+                return null;
+            }
+            Identifier id = gemId(gem.gem().get());
+            return id == null ? null : new Route(id, CRUSH_TIER);
+        }
+        return null;
     }
 
-    @Override
-    public void handleButton(Player player, int buttonId) {
-        setSelectedCategory(buttonId);
+    public static boolean isBulkPattern(ItemStack stack) {
+        return stack.is(ModRegistry.GEM_CRUSH_PATTERN.get()) && stack.get(ModRegistry.GEM_CRUSH.get()) != null;
     }
 
-    @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
-        output.putInt("selected_category", selectedCategory);
+    /** Whether the tier slot exists for this gem (gems with a minimum purity have no lower upgrade steps). */
+    public static boolean tierExists(@Nullable Gem gem, int tier) {
+        if (tier == CRUSH_TIER) {
+            return true;
+        }
+        return gem == null || Purity.values()[tier].isAtLeast(gem.getMinPurity());
     }
 
-    @Override
-    protected void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
-        selectedCategory = input.getIntOr("selected_category", 1);
+    public static boolean fitsGemSlot(Identifier gem, int tier, ItemStack stack) {
+        Route route = routeOf(stack);
+        return route != null && route.gem().equals(gem) && route.tier() == tier;
+    }
+
+    // ------------------------------------------------------------------------------------------------------------
+    // Storage access
+
+    public ItemStack getGemPattern(Identifier gem, int tier) {
+        ItemStack[] stacks = gemPatterns.get(gem);
+        return stacks == null ? ItemStack.EMPTY : stacks[tier];
+    }
+
+    public void setGemPattern(Identifier gem, int tier, ItemStack stack) {
+        ItemStack[] stacks = gemPatterns.computeIfAbsent(gem, g -> emptyRow());
+        stacks[tier] = stack;
+        if (Arrays.stream(stacks).allMatch(ItemStack::isEmpty)) {
+            gemPatterns.remove(gem);
+        }
+        markPatternsChanged();
+    }
+
+    /** Bit {@code tier} is set when that slot of the gem holds a pattern. */
+    public int patternMask(Identifier gem) {
+        ItemStack[] stacks = gemPatterns.get(gem);
+        int mask = 0;
+        if (stacks != null) {
+            for (int tier = 0; tier < SLOTS_PER_GEM; tier++) {
+                if (!stacks[tier].isEmpty()) {
+                    mask |= 1 << tier;
+                }
+            }
+        }
+        return mask;
+    }
+
+    public InternalInventory getBulkInventory() {
+        return patternInventory;
+    }
+
+    private static ItemStack[] emptyRow() {
+        ItemStack[] row = new ItemStack[SLOTS_PER_GEM];
+        Arrays.fill(row, ItemStack.EMPTY);
+        return row;
     }
 
     /**
-     * Strict validator for what patterns fit into each category and tier slot.
+     * Puts a single pattern where it belongs: its gem tier slot, or for crushing patterns the first free bulk slot.
+     * The result tells where it went: a gem id, or null for the bulk crushing category.
      */
-    public static boolean isPatternValidForSlot(int slotIndex, ItemStack stack) {
-        if (stack.isEmpty()) {
-            return false;
-        }
-        int category = slotIndex / SLOTS_PER_CATEGORY;
-        int tier = slotIndex % SLOTS_PER_CATEGORY;
+    public record InsertResult(boolean inserted, @Nullable Identifier category) {}
 
-        List<Gem> gems = GemKeys.sortedGems();
-        if (category == 0) {
-            // General category (Category 0) accepts any GemCrushPattern
-            return stack.is(ModRegistry.GEM_CRUSH_PATTERN.get());
+    public InsertResult insertSorted(ItemStack pattern) {
+        Route route = routeOf(pattern);
+        if (route != null && getGemPattern(route.gem(), route.tier()).isEmpty()) {
+            setGemPattern(route.gem(), route.tier(), pattern.copyWithCount(1));
+            return new InsertResult(true, route.gem());
         }
-
-        int gemIdx = category - 1;
-        if (gemIdx < 0 || gemIdx >= gems.size()) {
-            return false;
+        if (isBulkPattern(pattern)) {
+            for (int i = 0; i < patternInventory.size(); i++) {
+                if (patternInventory.getStackInSlot(i).isEmpty()) {
+                    patternInventory.setItemDirect(i, pattern.copyWithCount(1));
+                    return new InsertResult(true, null);
+                }
+            }
         }
-        Gem gem = gems.get(gemIdx);
-
-        if (tier < 5) {
-            // Upgrade tiers: 0=Cracked->Chipped, 1=Chipped->Flawed, 2=Flawed->Normal, 3=Normal->Flawless, 4=Flawless->Perfect
-            if (!stack.is(ModRegistry.GEM_UPGRADE_PATTERN.get())) {
-                return false;
-            }
-            GemUpgradeEncoding enc = stack.get(ModRegistry.GEM_UPGRADE.get());
-            if (enc == null) {
-                return false;
-            }
-            UnsocketedGem unsocketed = UnsocketedGem.of(enc.input().toStack());
-            if (!unsocketed.isValid() || unsocketed.gem().get() != gem) {
-                return false;
-            }
-            return unsocketed.purity().ordinal() == tier;
-        } else {
-            // Tier 5: Crushing pattern for this specific gem
-            if (!stack.is(ModRegistry.GEM_CRUSH_PATTERN.get())) {
-                return false;
-            }
-            GemCrushEncoding enc = stack.get(ModRegistry.GEM_CRUSH.get());
-            if (enc == null || enc.mode() != GemCrushEncoding.CrushMode.EXACT || enc.gem().isEmpty()) {
-                return false;
-            }
-            UnsocketedGem unsocketed = UnsocketedGem.of(enc.gem().get().toStack());
-            return unsocketed.isValid() && unsocketed.gem().get() == gem;
-        }
+        return new InsertResult(false, route == null ? null : route.gem());
     }
+
+    /** Category ids shown in the GUI: every registered gem (sorted) plus gems that only exist in this provider. */
+    public List<Identifier> gemCategories() {
+        Set<Identifier> ids = new LinkedHashSet<>();
+        for (Gem gem : GemKeys.sortedGems()) {
+            Identifier id = gemId(gem);
+            if (id != null) {
+                ids.add(id);
+            }
+        }
+        ids.addAll(gemPatterns.keySet());
+        return List.copyOf(ids);
+    }
+
+    public @Nullable Identifier getLastCategory() {
+        return lastCategory;
+    }
+
+    public void setLastCategory(@Nullable Identifier category) {
+        this.lastCategory = category;
+        setChanged();
+    }
+
+    // ------------------------------------------------------------------------------------------------------------
+    // Provider plumbing
 
     @Override
     public boolean acceptsPatternItem(ItemStack stack) {
@@ -138,12 +231,126 @@ public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
 
     @Override
     public boolean acceptsPatternInSlot(int slot, ItemStack stack) {
-        return isPatternValidForSlot(slot, stack);
+        // patternInventory is the bulk crushing category
+        return isBulkPattern(stack);
     }
 
     @Override
     protected boolean acceptsPattern(IPatternDetails details) {
         return details instanceof GemUpgradePattern || details instanceof GemCrushPattern;
+    }
+
+    @Override
+    protected String patternInventoryKey() {
+        return "bulk_crush";
+    }
+
+    @Override
+    protected void collectPatternStacks(List<ItemStack> out) {
+        super.collectPatternStacks(out);
+        for (ItemStack[] stacks : gemPatterns.values()) {
+            for (ItemStack stack : stacks) {
+                if (!stack.isEmpty()) {
+                    out.add(stack);
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void addExtraDrops(List<ItemStack> drops) {
+        for (ItemStack[] stacks : gemPatterns.values()) {
+            for (ItemStack stack : stacks) {
+                if (!stack.isEmpty()) {
+                    drops.add(stack.copy());
+                }
+            }
+        }
+        drops.addAll(pendingMigration);
+        gemPatterns.clear();
+        pendingMigration.clear();
+    }
+
+    @Override
+    protected void onFirstServerTick() {
+        if (pendingMigration.isEmpty() || level == null) {
+            return;
+        }
+        for (ItemStack stack : pendingMigration) {
+            if (!insertSorted(stack).inserted()) {
+                Block.popResource(level, worldPosition, stack);
+            }
+        }
+        pendingMigration.clear();
+        setChanged();
+    }
+
+    @Override
+    public boolean isVisibleInTerminal() {
+        return false;
+    }
+
+    @Override
+    public void writeMenuData(RegistryFriendlyByteBuf buf) {
+        buf.writeBlockPos(worldPosition);
+        List<Identifier> categories = gemCategories();
+        buf.writeVarInt(categories.size());
+        for (Identifier id : categories) {
+            buf.writeIdentifier(id);
+        }
+    }
+
+    @Override
+    public @Nullable AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
+        return new GemProviderMenu(containerId, inventory, this);
+    }
+
+    @Override
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        output.putInt("storage_version", STORAGE_VERSION);
+        ValueOutput.ValueOutputList list = output.childrenList("gem_patterns");
+        for (Map.Entry<Identifier, ItemStack[]> entry : gemPatterns.entrySet()) {
+            ValueOutput child = list.addChild();
+            child.putString("gem", entry.getKey().toString());
+            for (int tier = 0; tier < SLOTS_PER_GEM; tier++) {
+                if (!entry.getValue()[tier].isEmpty()) {
+                    child.store("tier" + tier, ItemStack.CODEC, entry.getValue()[tier]);
+                }
+            }
+        }
+        if (!pendingMigration.isEmpty()) {
+            output.store("pending", ItemStack.CODEC.listOf(), List.copyOf(pendingMigration));
+        }
+        if (lastCategory != null) {
+            output.putString("last_category", lastCategory.toString());
+        }
+    }
+
+    @Override
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        gemPatterns.clear();
+        pendingMigration.clear();
+        for (ValueInput child : input.childrenListOrEmpty("gem_patterns")) {
+            Identifier id = Identifier.tryParse(child.getStringOr("gem", ""));
+            if (id == null) {
+                continue;
+            }
+            ItemStack[] row = emptyRow();
+            for (int tier = 0; tier < SLOTS_PER_GEM; tier++) {
+                row[tier] = child.read("tier" + tier, ItemStack.CODEC).orElse(ItemStack.EMPTY);
+            }
+            gemPatterns.put(id, row);
+        }
+        input.read("pending", ItemStack.CODEC.listOf()).ifPresent(pendingMigration::addAll);
+        if (input.getIntOr("storage_version", 1) < STORAGE_VERSION) {
+            // Older versions kept everything in one "patterns" slot list (9, 27 or 64*6 slots). Sort it in later.
+            for (ValueInput entry : input.childrenListOrEmpty("patterns")) {
+                entry.read(ItemStack.MAP_CODEC).filter(s -> !s.isEmpty()).ifPresent(pendingMigration::add);
+            }
+        }
+        lastCategory = input.getString("last_category").map(Identifier::tryParse).orElse(null);
     }
 
     @Override

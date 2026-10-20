@@ -18,7 +18,7 @@ item_ids:
 
 The <ItemLink id="ae2apotheotic:gem_pattern_provider" /> connects your ME network directly to the **Apotheosis Gem Case**, automating purity upgrades and gem crushing without any manual intervention.
 
-Like standard ME Pattern Providers, it functions as a full ME network device: it requires 1 channel, connects via cable or direct block face contact from any side, and announces all loaded patterns to connected Crafting CPUs and the ME Pattern Access Terminal.
+Like standard ME Pattern Providers, it functions as a full ME network device: it requires 1 channel, connects via cable or direct block face contact from any side, and announces all loaded patterns to connected Crafting CPUs.
 
 <br clear="all" />
 
@@ -47,35 +47,35 @@ When an autocrafting order is placed through your ME terminals:
 
 ## The Categorized Interface
 
-To make managing hundreds of gem recipes enjoyable and compact, the Gem Pattern Provider features an interactive categorized interface:
+### 1. Search and Gem Grid
+* The search box filters gems by name; right-click it to clear.
+* **All / In use** switches between all gems and only the gems that already have patterns.
+* The grid shows **Bulk Crushing** first and then every registered gem (9 × 3, scroll with the mouse wheel or the scrollbar).
+* The bar at the bottom of each icon shows how many of its slots are filled (green = all of them).
+* The small indicators at the top right show the network (**N**), the Gem Case (**G**) and an info note (**i**).
 
-### 1. Top Gem Selector Strip
-* Displays 8 gem icons per page with navigation arrows (`<` and `>`) and a page counter (`1/3`).
-* The currently active gem is highlighted with a cyan border.
-* Badges in the corner of each gem icon indicate installed patterns (green badge when all upgrade tiers are filled).
+### 2. Gem Category
+Each gem has six slots, shown below its name:
+* **I:** Cracked → Chipped
+* **II:** Chipped → Flawed
+* **III:** Flawed → Normal
+* **IV:** Normal → Flawless
+* **V:** Flawless → Perfect
+* **Dust:** crushing exactly this gem ("This gem" crushing patterns).
 
-### 2. Category Header Row
-* Displays the current gem's full-size icon, localized name, installed tier count (e.g. `4 / 5 tiers`), and cycling arrows (`<` and `>`) for stepping through gems sequentially.
+Empty slots show a faint ghost of what they produce. Steps below the gem's minimum purity do not exist and are crossed out.
 
-### 3. Purity Tier Slots
-Six dedicated slots are provided for each gem:
-* **Tier I:** Cracked → Chipped
-* **Tier II:** Chipped → Flawed
-* **Tier III:** Flawed → Normal
-* **Tier IV:** Normal → Flawless
-* **Tier V:** Flawless → Perfect
-* **Tier VI (Dust):** Dedicated slot for crushing this specific gem into dust.
+### 3. Bulk Crushing
+27 free slots for any crushing pattern (exact gem, any gem of a purity, or any gem).
 
-Empty slots display subtle ghost labels (`I`, `II`, `III`, `IV`, `V`, `Dust`) and rich tooltips upon hovering.
+### 4. Smart Sorting (Shift-Click)
+Shift-click a pattern in your inventory and the provider puts it into its slot and opens that category.
+Upgrade patterns go to their gem, "This gem" crushing patterns to that gem's Dust slot (or Bulk Crushing if it is taken),
+all other crushing patterns to Bulk Crushing.
 
-### 4. Category 0: General Crushing
-Page 1 starts with **Category 0 (General Crushing)**, offering 6 slots dedicated to bulk and purity-based gem crushing patterns (e.g. "Any Cracked Gem → 1 Dust").
-
-### 5. Smart Pattern Auto-Routing (Shift-Click)
-When you hold **Shift** and click any encoded pattern from your player inventory:
-* The provider automatically inspects the pattern, identifies its gem type and purity tier, and deposits it directly into its designated slot.
-* The interface immediately flips the active view to that gem!
-* Strict slot filtering guarantees patterns can never be placed into mismatched slots, whether through the GUI or remotely via the ME Pattern Access Terminal.
+> [!NOTE]
+> Because patterns are sorted by gem, this provider is **not** shown in the ME Pattern Access Terminal.
+> Patterns are stored by gem id, so adding or removing gems never moves them around.
 
 <br clear="all" />
 

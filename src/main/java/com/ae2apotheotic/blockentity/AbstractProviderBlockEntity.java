@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.ListIterator;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
@@ -59,7 +60,6 @@ public abstract class AbstractProviderBlockEntity extends BlockEntity
     implements IInWorldGridNodeHost, IActionHost, ICraftingProvider, InternalInventoryHost, PatternContainer, MenuProvider {
 
     public static final int DEFAULT_PATTERN_SLOTS = 9;
-    public static final int GEM_PATTERN_SLOTS = 27;
     public static final int PATTERN_SLOTS = DEFAULT_PATTERN_SLOTS;
     /** Stop accepting new crafts while this many result stacks still wait to be inserted into the network. */
     private static final int MAX_BUFFERED_OUTPUTS = 64;
@@ -74,6 +74,7 @@ public abstract class AbstractProviderBlockEntity extends BlockEntity
     private boolean nodeCreated;
     private ProviderProblem lastProblem = ProviderProblem.NONE;
     private long lastSoundTick = Long.MIN_VALUE / 2;
+    private int revision;
 
     protected AbstractProviderBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         this(type, pos, state, DEFAULT_PATTERN_SLOTS);
@@ -125,6 +126,42 @@ public abstract class AbstractProviderBlockEntity extends BlockEntity
 
     protected void addExtraDrops(List<ItemStack> drops) {}
 
+    /** NBT key of {@link #patternInventory}. */
+    protected String patternInventoryKey() {
+        return "patterns";
+    }
+
+    /** Every stored pattern item; providers with extra storage add theirs. */
+    protected void collectPatternStacks(List<ItemStack> out) {
+        for (int i = 0; i < patternInventory.size(); i++) {
+            ItemStack stack = patternInventory.getStackInSlot(i);
+            if (!stack.isEmpty()) {
+                out.add(stack);
+            }
+        }
+    }
+
+    /** Runs once on the server when the grid node is created, before the patterns are read. */
+    protected void onFirstServerTick() {}
+
+    /** Extra data sent to the client when the GUI opens, read by the menu factory. */
+    public void writeMenuData(RegistryFriendlyByteBuf buf) {
+        buf.writeBlockPos(worldPosition);
+        buf.writeBoolean(this instanceof InfusionProviderBlockEntity);
+        buf.writeInt(patternSlots);
+    }
+
+    /** Changes whenever the stored patterns change, so menus know when to resync. */
+    public int getRevision() {
+        return revision;
+    }
+
+    protected void markPatternsChanged() {
+        revision++;
+        setChanged();
+        updatePatterns();
+    }
+
     /** Plays a machine sound, at most twice a second so big crafting jobs do not spam it. */
     protected void playSoundThrottled(BlockPos at, SoundEvent sound, float volume, float pitch) {
         if (level == null) {
@@ -172,6 +209,7 @@ public abstract class AbstractProviderBlockEntity extends BlockEntity
         }
         nodeCreated = true;
         mainNode.create(level, worldPosition);
+        onFirstServerTick();
         updatePatterns();
     }
 
@@ -191,7 +229,7 @@ public abstract class AbstractProviderBlockEntity extends BlockEntity
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
         mainNode.serialize(output);
-        patternInventory.writeToNBT(output, "patterns");
+        patternInventory.writeToNBT(output, patternInventoryKey());
         output.store("output_buffer", GenericStack.CODEC.listOf(), List.copyOf(outputBuffer));
     }
 
@@ -199,7 +237,7 @@ public abstract class AbstractProviderBlockEntity extends BlockEntity
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         mainNode.deserialize(input);
-        patternInventory.readFromNBT(input, "patterns");
+        patternInventory.readFromNBT(input, patternInventoryKey());
         outputBuffer.clear();
         input.read("output_buffer", GenericStack.CODEC.listOf()).ifPresent(outputBuffer::addAll);
     }
@@ -242,11 +280,9 @@ public abstract class AbstractProviderBlockEntity extends BlockEntity
             return;
         }
         patterns.clear();
-        for (int i = 0; i < patternInventory.size(); i++) {
-            ItemStack stack = patternInventory.getStackInSlot(i);
-            if (stack.isEmpty()) {
-                continue;
-            }
+        List<ItemStack> stacks = new ArrayList<>();
+        collectPatternStacks(stacks);
+        for (ItemStack stack : stacks) {
             IPatternDetails details = PatternDetailsHelper.decodePattern(stack, serverLevel);
             if (details != null && acceptsPattern(details)) {
                 patterns.add(details);
@@ -270,8 +306,7 @@ public abstract class AbstractProviderBlockEntity extends BlockEntity
 
     @Override
     public void onChangeInventory(AppEngInternalInventory inv, int slot) {
-        setChanged();
-        updatePatterns();
+        markPatternsChanged();
     }
 
     @Override
