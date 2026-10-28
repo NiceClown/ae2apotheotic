@@ -1,3 +1,5 @@
+<p align="center"><img src="src/main/resources/logo.png" alt="AE2 Apotheotic Automation" width="420"></p>
+
 # AE2 Apotheotic Automation
 
 An addon for **Applied Energistics 2** that connects AE2 autocrafting directly to **Apotheosis** and **Apothic Enchanting** mechanics:

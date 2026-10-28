@@ -6,6 +6,7 @@ license="MIT"
 modId="ae2apotheotic"
 version="${mod_version}"
 displayName="AE2 Apotheotic Automation"
+logoFile="logo.png"
 authors="Kirill"
 description='''
 AE2 addon that automates Apotheosis machines through ME autocrafting:
