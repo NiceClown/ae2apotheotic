@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.1] - 2026-10-28
+
+### Changed
+* **New encoded pattern sprites** in the shape of the AE2 patterns, but with a strong color per type so they are easy to tell apart: sapphire with a gold up-arrow (Gem Upgrade), amber with a shatter mark (Gem Crushing), magenta with an enchanting ring and an XP core (Infusion).
+
+### Added
+* **Mod logo**: the three Apotheotic blocks in inventory-style isometry with patterns and gems, and a vanilla Minecraft style stone title. Shown in the NeoForge mods list and the README.
+* `art/GenArt.java` regenerates the pattern sprites and the logo.
+
+---
+
 ## [2.1.0] - 2026-10-20
 
 ### Changed
