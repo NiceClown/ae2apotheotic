@@ -39,8 +39,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Automated test suite that executes unit, integration and in-world tests against real game objects.
- * Can be triggered via /ae2apotheotic test, or automatically when launched with -Dae2apotheotic.runTests=true.
+ * Robust automated test suite with isolated test execution.
  */
 public final class AE2ApotheoticTestRunner {
     private static int autoTicks = 0;
@@ -81,29 +80,34 @@ public final class AE2ApotheoticTestRunner {
         }
     }
 
+    @FunctionalInterface
+    public interface TestCase {
+        void run() throws Throwable;
+    }
+
+    public static void runTest(String name, TestCase test) {
+        try {
+            test.run();
+            pass(name);
+        } catch (Throwable t) {
+            String msg = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
+            fail(name + " -> " + msg);
+        }
+    }
+
     public static void runAllTests() {
         results.clear();
         log("=================================================");
         log("    AE2 Apotheotic Automation Test Suite (v2.2.0)");
         log("=================================================");
 
-        testPatternEncoding();
-        testTerminalCompositeInventory();
-        testXpMath();
-        testJadeServerData();
-        testInWorldMachines();
+        boolean mutate = Boolean.getBoolean("ae2apotheotic.mutateTests");
+        if (mutate) {
+            log(">>> MUTATION MODE ENABLED: DELIBERATE ERRORS INJECTED <<<");
+        }
 
-        log("=================================================");
-        log("  SUMMARY: " + results.stream().filter(s -> s.startsWith("[PASS]")).count() + " PASSED, "
-            + results.stream().filter(s -> s.startsWith("[FAIL]")).count() + " FAILED");
-        log("=================================================");
-
-        saveResultsToFile();
-    }
-
-    private static void testPatternEncoding() {
-        try {
-            // 1. Gem Upgrade Pattern
+        // Test 1: Gem Upgrade Encoding
+        runTest("Gem Upgrade Pattern Encoding & Decoding", () -> {
             Gem firstGem = GemRegistry.INSTANCE.getValues().iterator().next();
             ItemStack sampleGem = GemItem.createStack(firstGem, Purity.CRACKED, 1);
             AEItemKey inputKey = AEItemKey.of(sampleGem);
@@ -118,9 +122,12 @@ public final class AE2ApotheoticTestRunner {
             GemUpgradeEncoding decodedEnc = upgradePattern.get(ModRegistry.GEM_UPGRADE.get());
             assertNotNull(decodedEnc, "Decoded upgrade encoding must not be null");
             assertEqual(decodedEnc.input().toStack().getItem(), sampleGem.getItem(), "Upgrade input item match");
-            pass("Gem Upgrade Pattern Encoding & Decoding");
+        });
 
-            // 2. Gem Crush Pattern
+        // Test 2: Gem Crush Encoding
+        runTest("Gem Crush Pattern Encoding & Decoding", () -> {
+            Gem firstGem = GemRegistry.INSTANCE.getValues().iterator().next();
+            AEItemKey inputKey = AEItemKey.of(GemItem.createStack(firstGem, Purity.CRACKED, 1));
             GemCrushEncoding crushEnc = new GemCrushEncoding(GemCrushEncoding.CrushMode.EXACT, Optional.of(inputKey), Purity.CRACKED);
             ItemStack crushPattern = new ItemStack(ModRegistry.GEM_CRUSH_PATTERN.get());
             crushPattern.set(ModRegistry.GEM_CRUSH.get(), crushEnc);
@@ -128,9 +135,10 @@ public final class AE2ApotheoticTestRunner {
             GemCrushEncoding decodedCrush = crushPattern.get(ModRegistry.GEM_CRUSH.get());
             assertNotNull(decodedCrush, "Decoded crush encoding must not be null");
             assertEqual(decodedCrush.mode(), GemCrushEncoding.CrushMode.EXACT, "Crush mode EXACT");
-            pass("Gem Crush Pattern Encoding & Decoding");
+        });
 
-            // 3. Infusion Pattern
+        // Test 3: Infusion Encoding
+        runTest("Infusion Pattern Encoding & Decoding", () -> {
             AEItemKey sword = AEItemKey.of(Items.DIAMOND_SWORD);
             AEItemKey netheriteSword = AEItemKey.of(Items.NETHERITE_SWORD);
             InfusionEncoding infEnc = new InfusionEncoding(sword, netheriteSword, 1, Identifier.fromNamespaceAndPath("apothic_enchanting", "infusion/netherite_sword"), 50, 25, 10, 15);
@@ -142,19 +150,18 @@ public final class AE2ApotheoticTestRunner {
             assertEqual(decodedInf.eterna(), 50, "Infusion eterna value");
             assertEqual(decodedInf.quanta(), 25, "Infusion quanta value");
             assertEqual(decodedInf.arcana(), 10, "Infusion arcana value");
-            pass("Infusion Pattern Encoding & Decoding");
 
-        } catch (Throwable t) {
-            fail("Pattern Encoding: " + t.getMessage());
-        }
-    }
+            if (mutate) {
+                // DELIBERATE ERROR 1: inject intentional assertion failure
+                assertEqual(decodedInf.eterna(), 999, "Deliberate mutation error: impossible eterna");
+            }
+        });
 
-    private static void testTerminalCompositeInventory() {
-        try {
+        // Test 4: Terminal Composite Inventory
+        runTest("Gem Provider Composite Terminal Inventory", () -> {
             Minecraft mc = Minecraft.getInstance();
             if (mc.level == null) {
-                fail("No active client level for terminal inventory test");
-                return;
+                throw new IllegalStateException("No active client level");
             }
 
             BlockPos pos = mc.player.blockPosition().above(5);
@@ -175,66 +182,71 @@ public final class AE2ApotheoticTestRunner {
 
             termInv.setItemDirect(0, ItemStack.EMPTY);
             assertTrue(termInv.getStackInSlot(0).isEmpty(), "Slot 0 cleared");
-            pass("Gem Provider Composite Terminal Inventory");
+        });
 
-        } catch (Throwable t) {
-            fail("Terminal Composite Inventory: " + t.getMessage());
-        }
-    }
-
-    private static void testXpMath() {
-        try {
-            assertEqual(XpHelper.MB_PER_XP, 20, "20 mB per XP point standard");
-            pass("XP Math Conversion Factors");
-        } catch (Throwable t) {
-            fail("XP Math: " + t.getMessage());
-        }
-    }
-
-    private static void testJadeServerData() {
-        try {
+        // Test 5: Negative Testing: Pattern Terminal Rejects Non-Pattern Items
+        runTest("Gem Provider Terminal Validation Rejects Invalid Items", () -> {
             Minecraft mc = Minecraft.getInstance();
             if (mc.level == null) {
-                fail("No active client level for Jade server data test");
-                return;
+                throw new IllegalStateException("No active client level");
+            }
+            BlockPos pos = mc.player.blockPosition().above(7);
+            GemProviderBlockEntity be = new GemProviderBlockEntity(pos, ModRegistry.GEM_PROVIDER.get().defaultBlockState());
+            InternalInventory termInv = be.getTerminalPatternInventory();
+
+            // Iron ingot must NOT be valid in slot 0
+            boolean ironValid = termInv.isItemValid(0, new ItemStack(Items.IRON_INGOT));
+            if (mutate) {
+                // DELIBERATE ERROR 2: invert condition so it fails
+                assertTrue(ironValid, "Deliberate mutation error: asserting iron ingot is accepted");
+            } else {
+                assertTrue(!ironValid, "Terminal must reject iron ingot in pattern slot");
+            }
+        });
+
+        // Test 6: XP Math
+        runTest("XP Math Conversion Factors", () -> {
+            assertEqual(XpHelper.MB_PER_XP, 20, "20 mB per XP point standard");
+            if (mutate) {
+                // DELIBERATE ERROR 3: intentional wrong XP factor
+                assertEqual(XpHelper.MB_PER_XP, 100, "Deliberate mutation error: wrong MB_PER_XP");
+            }
+        });
+
+        // Test 7: Jade Server Data
+        runTest("Jade Server Data Serialization", () -> {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.level == null) {
+                throw new IllegalStateException("No active client level");
             }
 
             BlockPos pos = mc.player.blockPosition().above(6);
             GemProviderBlockEntity gemBe = new GemProviderBlockEntity(pos, ModRegistry.GEM_PROVIDER.get().defaultBlockState());
             InfusionProviderBlockEntity infBe = new InfusionProviderBlockEntity(pos.above(), ModRegistry.INFUSION_PROVIDER.get().defaultBlockState());
 
-            // Test gem provider jade data
             CompoundTag gemTag = new CompoundTag();
             gemTag.putString("type", "gem_provider");
             gemTag.putBoolean("online", gemBe.isOnline());
             gemTag.putInt("patterns", gemBe.getPatternCount());
             assertEqual(gemTag.getStringOr("type", ""), "gem_provider", "Gem provider Jade tag type");
 
-            // Test infusion provider jade data
             CompoundTag infTag = new CompoundTag();
             infTag.putString("type", "infusion_provider");
             infTag.putInt("stored_xp", infBe.getStoredXp());
             infTag.putLong("network_xp", infBe.getNetworkXpMb());
             assertEqual(infTag.getStringOr("type", ""), "infusion_provider", "Infusion provider Jade tag type");
+        });
 
-            pass("Jade Server Data Serialization");
-        } catch (Throwable t) {
-            fail("Jade Server Data: " + t.getMessage());
-        }
-    }
-
-    private static void testInWorldMachines() {
-        try {
+        // Test 8: In-World Machine Detection
+        runTest("In-World Adjacent Machine Detection (Gem Case + Raven Table)", () -> {
             Minecraft mc = Minecraft.getInstance();
             if (mc.level == null || mc.player == null) {
-                fail("No level for in-world machine test");
-                return;
+                throw new IllegalStateException("No level for in-world machine test");
             }
 
             Level level = mc.level;
             BlockPos base = mc.player.blockPosition().relative(mc.player.getDirection(), 3);
 
-            // Place Gem Case and Gem Provider adjacent
             BlockPos casePos = base;
             BlockPos provPos = base.above();
 
@@ -245,11 +257,9 @@ public final class AE2ApotheoticTestRunner {
                 assertNotNull(provBe.findGemCase(), "Gem Provider must detect adjacent Gem Case");
                 assertEqual(provBe.machineFlags(), GemProviderBlockEntity.FLAG_GEM_CASE, "Gem Provider flag GEM_CASE set");
             } else {
-                fail("Block entity at provPos was not GemProviderBlockEntity");
-                return;
+                throw new AssertionError("Block entity at provPos was not GemProviderBlockEntity");
             }
 
-            // Place Raven Table and Infusion Provider adjacent
             BlockPos tablePos = base.relative(Direction.EAST, 2);
             BlockPos infPos = tablePos.above();
 
@@ -261,21 +271,23 @@ public final class AE2ApotheoticTestRunner {
                 assertTrue((flags & InfusionProviderBlockEntity.FLAG_TABLE) != 0, "FLAG_TABLE set");
                 assertTrue((flags & InfusionProviderBlockEntity.FLAG_RAVEN) != 0, "FLAG_RAVEN set for Raven table");
             } else {
-                fail("Block entity at infPos was not InfusionProviderBlockEntity");
-                return;
+                throw new AssertionError("Block entity at infPos was not InfusionProviderBlockEntity");
             }
 
-            // Cleanup blocks
             level.setBlock(casePos, Blocks.AIR.defaultBlockState(), 3);
             level.setBlock(provPos, Blocks.AIR.defaultBlockState(), 3);
             level.setBlock(tablePos, Blocks.AIR.defaultBlockState(), 3);
             level.setBlock(infPos, Blocks.AIR.defaultBlockState(), 3);
+        });
 
-            pass("In-World Adjacent Machine Detection (Gem Case + Raven Table)");
+        long passCount = results.stream().filter(s -> s.startsWith("[PASS]")).count();
+        long failCount = results.stream().filter(s -> s.startsWith("[FAIL]")).count();
 
-        } catch (Throwable t) {
-            fail("In-World Machine Detection: " + t.getMessage());
-        }
+        log("=================================================");
+        log("  SUMMARY: " + passCount + " PASSED, " + failCount + " FAILED");
+        log("=================================================");
+
+        saveResultsToFile();
     }
 
     private static void pass(String name) {
