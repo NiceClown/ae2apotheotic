@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "T": "minecraft:enchanting_table",
+    "L": "minecraft:lapis_block",
+    "P": "ae2:pattern_provider",
+    "E": "ae2:engineering_processor"
+  },
+  "pattern": [
+    " T ",
+    "LPL",
+    " E "
+  ],
+  "result": {
+    "id": "ae2apotheotic:infusion_pattern_provider"
+  }
+}

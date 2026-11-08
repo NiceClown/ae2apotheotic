@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "conditions": [
+        { "condition": "minecraft:survives_explosion" }
+      ],
+      "entries": [
+        { "type": "minecraft:item", "name": "ae2apotheotic:pattern_encoder" }
+      ],
+      "rolls": 1.0
+    }
+  ],
+  "random_sequence": "ae2apotheotic:blocks/pattern_encoder"
+}

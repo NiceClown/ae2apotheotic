@@ -19,8 +19,8 @@ NEO_VERSION="${NEO_VERSION:-26.1.2.109}"
 MC_VERSION="${MC_VERSION:-26.1.2}"
 # Folder with the dependency mod jars (AE2, Apotheosis, Placebo, ...)
 DEPS="${DEPS_DIR:-$ROOT/..}"
-PLACEBO_JAR="${PLACEBO_JAR:-$PRISM/instances/All the Mods 11 - ATM11/minecraft/mods/Placebo-26.1.2-10.0.2.jar}"
-GUIDEME_JAR="${GUIDEME_JAR:-$PRISM/instances/All the Mods 11 - ATM11/minecraft/mods/guideme-26.1.15-beta.jar}"
+PLACEBO_JAR="${PLACEBO_JAR:-$DEPS/Placebo-26.1.2-10.0.2.jar}"
+GUIDEME_JAR="${GUIDEME_JAR:-$DEPS/guideme-26.1.15-beta.jar}"
 
 BUILD="$ROOT/build"
 CLASSES="$BUILD/classes"
@@ -47,7 +47,7 @@ for meta in "$META/net.minecraft/$MC_VERSION.json" "$META/net.neoforged/$NEO_VER
 done
 while IFS= read -r -d '' j; do CP_ENTRIES+=("$j"); done < <(find "$LIBS/org/lwjgl" -path "*3.4.1*" -name "*.jar" ! -name "*natives*" -print0)
 CP_ENTRIES+=("$LIBS/net/neoforged/minecraft-client-patched/$NEO_VERSION/minecraft-client-patched-$NEO_VERSION.jar")
-for j in "$DEPS"/appliedenergistics2-*.jar "$DEPS"/Apotheosis-*.jar "$DEPS"/ApothicAttributes-*.jar "$DEPS"/ApothicEnchanting-*.jar; do
+for j in "$DEPS"/appliedenergistics2-*.jar "$DEPS"/Apotheosis-*.jar "$DEPS"/ApothicAttributes-*.jar "$DEPS"/ApothicEnchanting-*.jar "$DEPS"/jei-*.jar "$DEPS"/Jade-*.jar; do
   CP_ENTRIES+=("$j")
 done
 CP_ENTRIES+=("$PLACEBO_JAR" "$GUIDEME_JAR")

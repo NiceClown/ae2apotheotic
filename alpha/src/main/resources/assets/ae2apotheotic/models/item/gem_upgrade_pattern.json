@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "ae2apotheotic:item/gem_upgrade_pattern"
+  }
+}

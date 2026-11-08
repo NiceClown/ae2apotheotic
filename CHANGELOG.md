@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.0] - 2026-11-09
+
+### Added
+* **JEI Recipe Transfer Integration (`@JeiPlugin`):**
+  * Clicking the `+` button in JEI for **Gem Cutting / Purity Upgrade** and **Table Infusion** recipes now instantly configures the Pattern Encoder!
+  * Automatically sets the encoder mode, transfers the input sample, selects target purity, and configures exact required Eterna, Quanta, and Arcana stats.
+  * Supported by a secure client-server network payload (`TransferRecipePayload`).
+* **Jade / Waila In-World HUD Tooltips (`@WailaPlugin`):**
+  * **Gem Pattern Provider:** displays ME Network online/offline status, adjacent Gem Case detection, total active patterns count, and active problem warnings.
+  * **Infusion Pattern Provider:** displays ME Network status, connected Enchanting Table type (Standard vs Raven Enchanting Table), internal stored XP (pts) and available network XP (mB), active patterns, and problem warnings.
+  * **Pattern Encoder:** displays current mode (Upgrade, Crushing, Infusion) and current sample item name.
+* **ME Pattern Access Terminal Integration:**
+  * Re-enabled full visibility in the ME Pattern Access Terminal (`isVisibleInTerminal() = true`).
+  * Added a virtual `CompositeTerminalInventory` combining all 27 Bulk Crushing slots with all categorized gem purity tier slots. Patterns can be viewed, added, and extracted directly from the Pattern Access Terminal with automatic categorization routing.
+* **Automated GameTest Runner (`AE2ApotheoticTestRunner`):**
+  * Automated in-game test runner executed via `/ae2apotheotic test` or automatically with `-Dae2apotheotic.runTests=true`.
+  * Fully verifies pattern encoding/decoding, composite terminal inventories, XP math conversion, Jade data serialization, and in-world machine adjacency.
+
+### Fixed
+* **Gem Case Transaction Safety & Rollback:**
+  * Tracked exact slot indices and amounts during upgrade material insertion into adjacent Gem Cases.
+  * If a recipe upgrade fails, rollback now extracts only the exact items and slots inserted during that craft, completely protecting any pre-existing player items in the Gem Case from being altered or extracted.
+  * Added multi-item capacity tracking to prevent uncommitted transaction collisions.
+
+---
+
 ## [2.1.1] - 2026-10-28
 
 ### Changed

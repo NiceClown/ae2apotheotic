@@ -150,6 +150,14 @@ public class EncoderBlockEntity extends BlockEntity implements InternalInventory
         changed();
     }
 
+    public void setRecipeIndex(int index) {
+        recipeIndex = Math.max(0, index);
+        leftIndex = 0;
+        rightIndex = 0;
+        statsNeedReset = true;
+        changed();
+    }
+
     public int getLeftIndex() {
         return leftIndex;
     }

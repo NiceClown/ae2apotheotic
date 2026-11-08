@@ -1,0 +1,14 @@
+{
+  "item_settings": {
+    "display_name": {
+      "type": "translatable",
+      "translate": "item.ae2apotheotic.guide"
+    },
+    "tooltip_lines": [
+      {
+        "text": "Apotheotic AE2 Automation Guide",
+        "color": "gray"
+      }
+    ]
+  }
+}

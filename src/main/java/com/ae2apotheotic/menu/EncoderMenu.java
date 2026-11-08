@@ -323,6 +323,10 @@ public class EncoderMenu extends AbstractContainerMenu {
         return !encoder.isRemoved() && player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) <= 64.0;
     }
 
+    public @Nullable EncoderBlockEntity getEncoder() {
+        return encoder;
+    }
+
     // ------------------------------------------------------------------------------------------------------------
     // Client accessors
 

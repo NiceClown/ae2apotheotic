@@ -1,6 +1,7 @@
 package com.ae2apotheotic.blockentity;
 
 import appeng.api.crafting.IPatternDetails;
+import appeng.api.inventories.BaseInternalInventory;
 import appeng.api.inventories.InternalInventory;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
@@ -287,7 +288,132 @@ public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
 
     @Override
     public boolean isVisibleInTerminal() {
-        return false;
+        return true;
+    }
+
+    private final InternalInventory terminalInventory = new CompositeTerminalInventory();
+
+    @Override
+    public InternalInventory getTerminalPatternInventory() {
+        return terminalInventory;
+    }
+
+    private class CompositeTerminalInventory extends BaseInternalInventory {
+        @Override
+        public int size() {
+            return BULK_SLOTS + gemCategories().size() * SLOTS_PER_GEM;
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            return 1;
+        }
+
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            if (slot < BULK_SLOTS) {
+                return patternInventory.getStackInSlot(slot);
+            }
+            int offset = slot - BULK_SLOTS;
+            int catIdx = offset / SLOTS_PER_GEM;
+            int tier = offset % SLOTS_PER_GEM;
+            List<Identifier> cats = gemCategories();
+            if (catIdx >= cats.size()) {
+                return ItemStack.EMPTY;
+            }
+            return getGemPattern(cats.get(catIdx), tier);
+        }
+
+        @Override
+        public void setItemDirect(int slot, ItemStack stack) {
+            if (slot < BULK_SLOTS) {
+                patternInventory.setItemDirect(slot, stack);
+                return;
+            }
+            int offset = slot - BULK_SLOTS;
+            int catIdx = offset / SLOTS_PER_GEM;
+            int tier = offset % SLOTS_PER_GEM;
+            List<Identifier> cats = gemCategories();
+            if (catIdx < cats.size()) {
+                setGemPattern(cats.get(catIdx), tier, stack);
+            }
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            if (slot < BULK_SLOTS) {
+                return isBulkPattern(stack);
+            }
+            int offset = slot - BULK_SLOTS;
+            int catIdx = offset / SLOTS_PER_GEM;
+            int tier = offset % SLOTS_PER_GEM;
+            List<Identifier> cats = gemCategories();
+            if (catIdx >= cats.size()) {
+                return false;
+            }
+            return fitsGemSlot(cats.get(catIdx), tier, stack);
+        }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            if (stack.isEmpty() || !isItemValid(slot, stack)) {
+                return stack;
+            }
+            ItemStack current = getStackInSlot(slot);
+            if (!current.isEmpty()) {
+                return stack;
+            }
+            if (!simulate) {
+                setItemDirect(slot, stack.copyWithCount(1));
+            }
+            return stack.getCount() > 1 ? stack.copyWithCount(stack.getCount() - 1) : ItemStack.EMPTY;
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            if (amount <= 0) {
+                return ItemStack.EMPTY;
+            }
+            ItemStack current = getStackInSlot(slot);
+            if (current.isEmpty()) {
+                return ItemStack.EMPTY;
+            }
+            if (!simulate) {
+                setItemDirect(slot, ItemStack.EMPTY);
+            }
+            return current.copy();
+        }
+
+        @Override
+        public ItemStack addItems(ItemStack stack, boolean simulate) {
+            if (stack.isEmpty() || !acceptsPatternItem(stack)) {
+                return stack;
+            }
+            if (simulate) {
+                Route route = routeOf(stack);
+                if (route != null && getGemPattern(route.gem(), route.tier()).isEmpty()) {
+                    return stack.getCount() > 1 ? stack.copyWithCount(stack.getCount() - 1) : ItemStack.EMPTY;
+                }
+                if (isBulkPattern(stack)) {
+                    for (int i = 0; i < patternInventory.size(); i++) {
+                        if (patternInventory.getStackInSlot(i).isEmpty()) {
+                            return stack.getCount() > 1 ? stack.copyWithCount(stack.getCount() - 1) : ItemStack.EMPTY;
+                        }
+                    }
+                }
+                return stack;
+            }
+            InsertResult res = insertSorted(stack);
+            if (res.inserted()) {
+                return stack.getCount() > 1 ? stack.copyWithCount(stack.getCount() - 1) : ItemStack.EMPTY;
+            }
+            return stack;
+        }
+
+        @Override
+        public void sendChangeNotification(int slot) {
+            markPatternsChanged();
+        }
     }
 
     @Override
@@ -415,6 +541,8 @@ public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
         }
     }
 
+    private record Insertion(int slot, ItemResource resource, int amount) {}
+
     private @Nullable List<GenericStack> upgrade(ServerLevel level, GemUpgradePattern pattern, KeyCounter[] inputs) {
         GemCaseTile gemCase = findGemCase();
         if (gemCase == null) {
@@ -447,23 +575,30 @@ public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
 
         // Put the materials into the Gem Case. Each material goes into one slot as a whole, because the Gem Case
         // looks for a single slot that holds the full amount required by the recipe.
+        // We track the exact slots and amounts inserted so rollback never touches existing player materials.
         InternalItemHandler mats = gemCase.getUpgradeMaterials();
+        List<Insertion> inserted = new ArrayList<>(2);
         try (Transaction tx = Transaction.openRoot()) {
             for (Material material : List.of(left, right)) {
-                int slot = findSlotFor(mats, material);
+                int slot = findSlotFor(mats, material, inserted);
                 if (slot < 0 || mats.insertInternal(slot, material.resource(), material.amount(), tx) < material.amount()) {
                     return fail(ProviderProblem.NO_ROOM_FOR_MATERIALS);
                 }
+                inserted.add(new Insertion(slot, material.resource(), material.amount()));
             }
             tx.commit();
         }
 
         gemCase.depositGem(GemItem.createStack(holder.get(), from, GemUpgradeEncoding.GEMS_PER_UPGRADE));
         if (!gemCase.upgradeGem(holder, to)) {
-            // Should not happen because we checked the recipes, but never lose anything: undo our changes.
+            // Should not happen because we checked the recipes, but never lose anything: undo our changes safely.
             gemCase.extractGem(holder, from, GemUpgradeEncoding.GEMS_PER_UPGRADE);
-            removeMaterial(mats, left);
-            removeMaterial(mats, right);
+            try (Transaction tx = Transaction.openRoot()) {
+                for (Insertion ins : inserted) {
+                    mats.extractInternal(ins.slot(), ins.resource(), ins.amount(), tx);
+                }
+                tx.commit();
+            }
             return fail(ProviderProblem.UPGRADE_REJECTED);
         }
         ItemStack result = gemCase.extractGem(holder, to, 1);
@@ -498,31 +633,26 @@ public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
     }
 
     /** A slot that already holds this material and has room for all of it, otherwise an empty slot. */
-    private static int findSlotFor(InternalItemHandler mats, Material material) {
+    private static int findSlotFor(InternalItemHandler mats, Material material, List<Insertion> pending) {
         int empty = -1;
         for (int i = 0; i < mats.size(); i++) {
             ItemResource present = mats.getResource(i);
             long capacity = mats.getCapacityAsLong(i, material.resource());
+            long pendingInSlot = 0;
+            for (Insertion ins : pending) {
+                if (ins.slot() == i) {
+                    pendingInSlot += ins.amount();
+                    present = ins.resource();
+                }
+            }
             if (present.isEmpty()) {
-                if (empty < 0 && capacity >= material.amount()) {
+                if (empty < 0 && capacity - pendingInSlot >= material.amount()) {
                     empty = i;
                 }
-            } else if (present.equals(material.resource()) && capacity - mats.getAmountAsLong(i) >= material.amount()) {
+            } else if (present.equals(material.resource()) && capacity - mats.getAmountAsLong(i) - pendingInSlot >= material.amount()) {
                 return i;
             }
         }
         return empty;
-    }
-
-    private static void removeMaterial(InternalItemHandler mats, Material material) {
-        try (Transaction tx = Transaction.openRoot()) {
-            int remaining = material.amount();
-            for (int i = 0; i < mats.size() && remaining > 0; i++) {
-                if (mats.getResource(i).equals(material.resource())) {
-                    remaining -= mats.extractInternal(i, material.resource(), remaining, tx);
-                }
-            }
-            tx.commit();
-        }
     }
 }

@@ -16,6 +16,9 @@ public final class AE2ApotheoticClient {
         if (Boolean.getBoolean("ae2apotheotic.devTools") || Boolean.getBoolean("ae2apotheotic.autoCapture")) {
             GuideScreenshotCapture.init();
         }
+        if (Boolean.getBoolean("ae2apotheotic.devTools") || Boolean.getBoolean("ae2apotheotic.runTests")) {
+            com.ae2apotheotic.gametest.AE2ApotheoticTestRunner.init();
+        }
     }
 
     private static void registerScreens(RegisterMenuScreensEvent event) {
