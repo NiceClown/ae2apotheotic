@@ -6,9 +6,10 @@ import java.util.Random;
 import javax.imageio.ImageIO;
 
 /**
- * Generates the encoded pattern sprites (AE2 shape, recolored) and the mod logo (our blocks in isometry + vanilla-style title).
- * Uses only this mod's own textures: Apotheosis assets are All Rights Reserved, so gems are drawn by hand.
- * Run: java art/GenArt.java <AE2 blank_pattern.png> src/main/resources/assets/ae2apotheotic/textures/item src/main/resources/logo.png <preview dir>
+ * Generates the encoded pattern sprites (AE2 shape, recolored), the mod logo (our blocks in isometry + vanilla-style title)
+ * and the text-free CurseForge icon. Uses only this mod's own textures: Apotheosis assets are All Rights Reserved, so gems
+ * are drawn by hand.
+ * Run: java art/GenArt.java <AE2 blank_pattern.png> src/main/resources/assets/ae2apotheotic/textures/item src/main/resources/logo.png <preview dir> [art/curseforge_icon.png]
  * (blank_pattern.png comes from the AE2 jar: assets/ae2/textures/item/blank_pattern.png)
  */
 public class GenArt {
@@ -37,6 +38,9 @@ public class GenArt {
             "#...#",
             ".###." }, 0xFFFFC2F8, 0xFF8CFF4A);
         logoScene(args[2], new File(itemDir).getParent() + "/block", itemDir);
+        if (args.length > 4) {
+            icon(args[4], new File(itemDir).getParent() + "/block");
+        }
         preview(args[3], itemDir);
     }
 
@@ -406,6 +410,9 @@ public class GenArt {
     }
 
     /** Minecraft inventory-style block: top face lit, left face 86 %, right face 68 %. cx/ty = top vertex, a = pixels per texel. */
+    /** Brightness of the iso cubes (the icon uses a brighter block so it stands out when tiny). */
+    private static float cubeGain = 1F;
+
     private static void isoCube(BufferedImage img, String dir, String name, int cx, int ty, int a) throws Exception {
         BufferedImage top = ImageIO.read(new File(dir + "/" + name + "_top.png"));
         BufferedImage left = ImageIO.read(new File(dir + "/" + name + "_front.png"));
@@ -425,18 +432,18 @@ public class GenArt {
                 double v = (Y - X) / 2;
                 int color = 0;
                 if (u >= 0 && v >= 0 && u < n && v < n) {
-                    color = top.getRGB((int) u, (int) v);
+                    color = darken(top.getRGB((int) u, (int) v), cubeGain);
                 } else if (px < cx) {
                     double s = (px - cx + n * a) / a;
                     double t = (py - ty - n * a / 2.0 - s * a / 2) / a;
                     if (s >= 0 && s < n && t >= 0 && t < n) {
-                        color = darken(left.getRGB((int) s, (int) t), 0.86F);
+                        color = darken(left.getRGB((int) s, (int) t), 0.86F * cubeGain);
                     }
                 } else {
                     double s = (px - cx) / a;
                     double t = (py - ty - n * a + s * a / 2) / a;
                     if (s >= 0 && s < n && t >= 0 && t < n) {
-                        color = darken(right.getRGB((int) s, (int) t), 0.68F);
+                        color = darken(right.getRGB((int) s, (int) t), 0.68F * cubeGain);
                     }
                 }
                 if ((color >>> 24) != 0) {
@@ -571,6 +578,81 @@ public class GenArt {
         }
         gem(img, x0 - 13, y0 - 1, 0xFF3FA9FF);
         gem(img, x0 + w + 4, y0 - 1, 0xFFD23FE0);
+    }
+
+    // ------------------------------------------------------------------------------------------------------------
+    // CurseForge icon: no text, few big shapes so it still reads as a 64 px avatar.
+
+    private static void icon(String out, String blockDir) throws Exception {
+        int W = 40;
+        int H = 40;
+        BufferedImage img = new BufferedImage(W, H, BufferedImage.TYPE_INT_ARGB);
+        for (int y = 0; y < H; y++) {
+            for (int x = 0; x < W; x++) {
+                if (corner(x, y, W, H, 3)) {
+                    continue;
+                }
+                float dx = (x - 18) / 22F;
+                float dy = (y - 18) / 22F;
+                float glow = Math.max(0, 1 - (dx * dx + dy * dy));
+                float t = y / (float) H;
+                int r = (int) (0x6A * (1 - t) + 0x1E * t + 0x40 * glow);
+                int g = (int) (0x2A * (1 - t) + 0x6A * t + 0x20 * glow);
+                int b = (int) (0xB8 * (1 - t) + 0x9A * t + 0x30 * glow);
+                img.setRGB(x, y, rgb(r, g, b));
+            }
+        }
+        frame(img, W, H, 3);
+        cubeGain = 1.45F;
+        isoCube(img, blockDir, "gem_pattern_provider", 18, 4, 1);
+        cubeGain = 1F;
+        bigGem(img, 24, 23);
+        sparkle(img, 33, 7);
+        sparkle(img, 6, 30);
+        img.setRGB(9, 7, 0xFFB8F0FF);
+        img.setRGB(31, 35, 0xFFD9A6FF);
+        int k = 10;
+        BufferedImage big = new BufferedImage(W * k, H * k, BufferedImage.TYPE_INT_ARGB);
+        for (int y = 0; y < H * k; y++) {
+            for (int x = 0; x < W * k; x++) {
+                big.setRGB(x, y, img.getRGB(x / k, y / k));
+            }
+        }
+        ImageIO.write(big, "png", new File(out));
+        System.out.println("wrote " + out);
+    }
+
+    /** 13x12 cut gem with a strong outline. */
+    private static void bigGem(BufferedImage img, int x0, int y0) {
+        String[] shape = {
+            "...#######...",
+            "..#LLWLLMM#..",
+            ".#LLWWLMMMD#.",
+            "#LLWLLMMMMDD#",
+            "#LWLLMMMMMDD#",
+            "#LLLMMMMMDDD#",
+            ".#LMMMMMDDD#.",
+            "..#MMMMMDD#..",
+            "...#MMMDD#...",
+            "....#MMD#....",
+            ".....#D#.....",
+            "......#......" };
+        int color = 0xFFD23FE0;
+        for (int y = 0; y < shape.length; y++) {
+            for (int x = 0; x < shape[y].length(); x++) {
+                int c = switch (shape[y].charAt(x)) {
+                    case '#' -> 0xFF0A0812;
+                    case 'W' -> 0xFFFFFFFF;
+                    case 'L' -> mix(color, 0xFFFFFFFF, 0.5F);
+                    case 'M' -> color;
+                    case 'D' -> mix(color, 0xFF000000, 0.45F);
+                    default -> 0;
+                };
+                if (c != 0) {
+                    img.setRGB(x0 + x, y0 + y, c);
+                }
+            }
+        }
     }
 
     private static void outline(BufferedImage img, boolean[][] solid, int color) {
