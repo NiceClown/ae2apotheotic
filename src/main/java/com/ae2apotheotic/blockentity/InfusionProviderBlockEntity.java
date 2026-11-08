@@ -102,7 +102,7 @@ public class InfusionProviderBlockEntity extends AbstractProviderBlockEntity {
     }
 
     @Override
-    protected @Nullable List<GenericStack> process(ServerLevel level, IPatternDetails details, KeyCounter[] inputs) {
+    public @Nullable List<GenericStack> process(ServerLevel level, IPatternDetails details, KeyCounter[] inputs) {
         if (!(details instanceof InfusionPattern pattern) || inputs.length < 2) {
             return fail(ProviderProblem.INVALID_INPUTS);
         }
@@ -174,6 +174,16 @@ public class InfusionProviderBlockEntity extends AbstractProviderBlockEntity {
 
     public int getStoredXp() {
         return (int) Math.min(Integer.MAX_VALUE, storedXpMb / XpHelper.MB_PER_XP);
+    }
+
+    public void setStoredXpMb(long mb) {
+        this.storedXpMb = mb;
+        setChanged();
+    }
+
+    public void addStoredXp(int points) {
+        this.storedXpMb += (long) points * XpHelper.MB_PER_XP;
+        setChanged();
     }
 
     /** Liquid experience (mB) available in the connected ME network. */

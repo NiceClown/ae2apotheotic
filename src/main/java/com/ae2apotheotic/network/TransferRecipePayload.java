@@ -42,26 +42,27 @@ public record TransferRecipePayload(
     }
 
     public static void handle(TransferRecipePayload payload, IPayloadContext context) {
-        context.enqueueWork(() -> {
-            Player player = context.player();
-            if (player.containerMenu instanceof EncoderMenu menu && menu.stillValid(player)) {
-                EncoderBlockEntity encoder = menu.getEncoder();
-                if (encoder != null) {
-                    encoder.setMode(payload.mode());
-                    if (!payload.sample().isEmpty()) {
-                        encoder.getInventory().setItemDirect(EncoderBlockEntity.SLOT_SAMPLE, payload.sample().copyWithCount(1));
-                    }
-                    if (payload.purity() >= 0) {
-                        encoder.setPurity(payload.purity());
-                    }
-                    if (payload.recipeIndex() >= 0) {
-                        encoder.setRecipeIndex(payload.recipeIndex());
-                    }
-                    if (payload.mode() == EncoderBlockEntity.MODE_INFUSION) {
-                        encoder.setStats(payload.eterna(), payload.quanta(), payload.arcana());
-                    }
+        context.enqueueWork(() -> applyTo(context.player(), payload));
+    }
+
+    public static void applyTo(Player player, TransferRecipePayload payload) {
+        if (player.containerMenu instanceof EncoderMenu menu && menu.stillValid(player)) {
+            EncoderBlockEntity encoder = menu.getEncoder();
+            if (encoder != null) {
+                encoder.setMode(payload.mode());
+                if (!payload.sample().isEmpty()) {
+                    encoder.getInventory().setItemDirect(EncoderBlockEntity.SLOT_SAMPLE, payload.sample().copyWithCount(1));
+                }
+                if (payload.purity() >= 0) {
+                    encoder.setPurity(payload.purity());
+                }
+                if (payload.recipeIndex() >= 0) {
+                    encoder.setRecipeIndex(payload.recipeIndex());
+                }
+                if (payload.mode() == EncoderBlockEntity.MODE_INFUSION) {
+                    encoder.setStats(payload.eterna(), payload.quanta(), payload.arcana());
                 }
             }
-        });
+        }
     }
 }

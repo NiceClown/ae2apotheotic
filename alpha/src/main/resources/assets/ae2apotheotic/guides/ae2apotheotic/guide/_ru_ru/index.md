@@ -1,6 +1,5 @@
 ---
 navigation:
-  parent: index.md
   title: Апофеотическая автоматизация
   position: 60
   icon: ae2apotheotic:pattern_encoder

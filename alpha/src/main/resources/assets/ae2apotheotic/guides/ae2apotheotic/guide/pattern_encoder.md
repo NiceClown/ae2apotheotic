@@ -1,6 +1,6 @@
-﻿---
+---
 navigation:
-  parent: ae2apotheotic/index.md
+  parent: index.md
   title: Pattern Encoder
   icon: ae2apotheotic:pattern_encoder
   position: 10
@@ -68,7 +68,7 @@ This mode encodes patterns to smash gems into **Gem Dust**. Autocrafting guarant
 
 Toggle the crushing filter mode using the central button:
 * **"Only this gem" (Exact):** Encodes crushing for that specific gem type and purity.
-* **"Any — <Purity>":** Matches any gem of the selected purity tier (perfect for bulk recycling low-tier gems).
+* **"Any — &lt;Purity&gt;":** Matches any gem of the selected purity tier (perfect for bulk recycling low-tier gems).
 * **"Any gem":** Matches any gem regardless of type or purity (use with caution so valuable gems are not accidentally crushed).
 
 Click **Encode** to produce an <ItemLink id="ae2apotheotic:gem_crush_pattern" />.

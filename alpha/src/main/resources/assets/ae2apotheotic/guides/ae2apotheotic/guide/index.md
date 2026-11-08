@@ -1,6 +1,5 @@
 ---
 navigation:
-  parent: index.md
   title: Apotheotic Automation
   position: 60
   icon: ae2apotheotic:pattern_encoder

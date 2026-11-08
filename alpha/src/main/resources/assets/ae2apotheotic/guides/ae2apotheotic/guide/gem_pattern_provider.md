@@ -1,6 +1,6 @@
-﻿---
+---
 navigation:
-  parent: ae2apotheotic/index.md
+  parent: index.md
   title: Gem Pattern Provider
   icon: ae2apotheotic:gem_pattern_provider
   position: 20

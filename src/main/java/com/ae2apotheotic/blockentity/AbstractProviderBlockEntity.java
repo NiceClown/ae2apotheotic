@@ -119,7 +119,7 @@ public abstract class AbstractProviderBlockEntity extends BlockEntity
      * Runs one craft. Must not change anything if it returns {@code null} (then the crafting CPU keeps the inputs
      * and retries later). On success the inputs are consumed and the returned stacks are sent to the network.
      */
-    protected abstract @Nullable List<GenericStack> process(ServerLevel level, IPatternDetails details, KeyCounter[] inputs);
+    public abstract @Nullable List<GenericStack> process(ServerLevel level, IPatternDetails details, KeyCounter[] inputs);
 
     /** Bit flags describing the attached machine, see {@link ProviderMenu}. */
     public abstract int machineFlags();

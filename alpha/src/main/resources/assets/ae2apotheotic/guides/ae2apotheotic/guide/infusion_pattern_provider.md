@@ -1,6 +1,6 @@
-﻿---
+---
 navigation:
-  parent: ae2apotheotic/index.md
+  parent: index.md
   title: Infusion Pattern Provider
   icon: ae2apotheotic:infusion_pattern_provider
   position: 30

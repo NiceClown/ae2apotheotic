@@ -24,12 +24,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **Automated GameTest Runner (`AE2ApotheoticTestRunner`):**
   * Automated in-game test runner executed via `/ae2apotheotic test` or automatically with `-Dae2apotheotic.runTests=true`.
   * Fully verifies pattern encoding/decoding, composite terminal inventories, XP math conversion, Jade data serialization, and in-world machine adjacency.
+  * Extended with live in-world server-thread execution: gem purity upgrade transactions, safe rollback verification, real gem crushing with purity-scaled yield, liquid XP table infusion crafting, blank pattern programming, and client-server recipe transfer payloads.
+* **Multiplayer & LAN Socket Network Verification:**
+  * Added automated dual-process integration testing with integrated LAN server publishing and remote Netty TCP client connection.
+  * Verified client-to-server custom payload dispatch over real TCP socket with 100% test pass rate.
 
 ### Fixed
 * **Gem Case Transaction Safety & Rollback:**
   * Tracked exact slot indices and amounts during upgrade material insertion into adjacent Gem Cases.
   * If a recipe upgrade fails, rollback now extracts only the exact items and slots inserted during that craft, completely protecting any pre-existing player items in the Gem Case from being altered or extracted.
   * Added multi-item capacity tracking to prevent uncommitted transaction collisions.
+* **GuideME MDX Parsing & Navigation:**
+  * Fixed unescaped `<Purity>` and `<Чистота>` tags causing MDX parser exceptions in `patterns.md` and `pattern_encoder.md`.
+  * Fixed cyclic root navigation reference and parent references in `ae2apotheotic:guide`.
 
 ---
 

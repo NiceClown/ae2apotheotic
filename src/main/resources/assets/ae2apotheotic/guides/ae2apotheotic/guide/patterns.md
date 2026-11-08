@@ -1,6 +1,6 @@
 ---
 navigation:
-  parent: ae2apotheotic/index.md
+  parent: index.md
   title: Specialized Patterns
   icon: ae2apotheotic:gem_upgrade_pattern
   position: 40
@@ -45,7 +45,7 @@ To solve this, **AE2 Apotheotic Automation** provides three dedicated pattern ca
 * **Item:** <ItemLink id="ae2apotheotic:gem_crush_pattern" />
 * **Used in:** <ItemLink id="ae2apotheotic:gem_pattern_provider" />
 * **Contents:**
-  * Crushing filter mode: **"Only this gem"**, **"Any — <Purity>"**, or **"Any gem"**
+  * Crushing filter mode: **"Only this gem"**, **"Any — &lt;Purity&gt;"**, or **"Any gem"**
   * Target gem purity tier
   * Guaranteed output dust quantity (1 to 5 Gem Dust)
 * **Crafting Behavior:** Pulverizes gems directly into Gem Dust internally without requiring an external machine.

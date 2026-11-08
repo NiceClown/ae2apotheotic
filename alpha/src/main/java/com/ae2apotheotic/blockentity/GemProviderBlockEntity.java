@@ -497,7 +497,7 @@ public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
     }
 
     @Override
-    protected @Nullable List<GenericStack> process(ServerLevel level, IPatternDetails details, KeyCounter[] inputs) {
+    public @Nullable List<GenericStack> process(ServerLevel level, IPatternDetails details, KeyCounter[] inputs) {
         if (details instanceof GemCrushPattern) {
             return crush(inputs);
         }
@@ -510,7 +510,7 @@ public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
     // ------------------------------------------------------------------------------------------------------------
     // Crushing
 
-    private @Nullable List<GenericStack> crush(KeyCounter[] inputs) {
+    public @Nullable List<GenericStack> crush(KeyCounter[] inputs) {
         long totalDust = 0;
         for (KeyCounter counter : inputs) {
             for (Object2LongMap.Entry<AEKey> entry : counter) {
@@ -543,7 +543,7 @@ public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
 
     private record Insertion(int slot, ItemResource resource, int amount) {}
 
-    private @Nullable List<GenericStack> upgrade(ServerLevel level, GemUpgradePattern pattern, KeyCounter[] inputs) {
+    public @Nullable List<GenericStack> upgrade(ServerLevel level, GemUpgradePattern pattern, KeyCounter[] inputs) {
         GemCaseTile gemCase = findGemCase();
         if (gemCase == null) {
             return fail(ProviderProblem.NO_GEM_CASE);

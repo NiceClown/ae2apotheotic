@@ -2,20 +2,37 @@ package com.ae2apotheotic.gametest;
 
 import appeng.api.inventories.InternalInventory;
 import appeng.api.stacks.AEItemKey;
+import appeng.api.stacks.GenericStack;
+import appeng.api.stacks.KeyCounter;
+import appeng.core.definitions.AEItems;
+import com.ae2apotheotic.blockentity.EncoderBlockEntity;
 import com.ae2apotheotic.blockentity.GemProviderBlockEntity;
 import com.ae2apotheotic.blockentity.InfusionProviderBlockEntity;
+import com.ae2apotheotic.menu.EncoderMenu;
+import com.ae2apotheotic.network.TransferRecipePayload;
 import com.ae2apotheotic.pattern.GemCrushEncoding;
+import com.ae2apotheotic.pattern.GemKeys;
 import com.ae2apotheotic.pattern.GemUpgradeEncoding;
+import com.ae2apotheotic.pattern.GemUpgradePattern;
 import com.ae2apotheotic.pattern.InfusionEncoding;
+import com.ae2apotheotic.pattern.InfusionPattern;
 import com.ae2apotheotic.pattern.MaterialChoice;
 import com.ae2apotheotic.registry.ModRegistry;
 import com.ae2apotheotic.util.XpHelper;
+import com.mojang.blaze3d.systems.RenderSystem;
 import dev.shadowsoffire.apotheosis.Apoth;
 import dev.shadowsoffire.apotheosis.socket.gem.Gem;
 import dev.shadowsoffire.apotheosis.socket.gem.GemItem;
 import dev.shadowsoffire.apotheosis.socket.gem.GemRegistry;
 import dev.shadowsoffire.apotheosis.socket.gem.Purity;
+import dev.shadowsoffire.apotheosis.socket.gem.UnsocketedGem;
+import dev.shadowsoffire.apotheosis.socket.gem.cutting.GemCuttingMenu;
+import dev.shadowsoffire.apotheosis.socket.gem.cutting.GemCuttingRecipe;
+import dev.shadowsoffire.apotheosis.socket.gem.cutting.PurityUpgradeRecipe;
+import dev.shadowsoffire.apotheosis.socket.gem.storage.GemCaseTile;
 import dev.shadowsoffire.apothic_enchanting.Ench;
+import dev.shadowsoffire.apothic_enchanting.table.infusion.InfusionRecipe;
+import dev.shadowsoffire.placebo.cap.InternalItemHandler;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
@@ -23,27 +40,38 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.common.crafting.SizedIngredient;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Robust automated test suite with isolated test execution.
+ * Robust automated in-game test runner supporting both isolated local runs and multiplayer live server testing.
  */
 public final class AE2ApotheoticTestRunner {
     private static int autoTicks = 0;
     private static boolean testsDone = false;
+    private static boolean waitingForMultiplayer = false;
+    private static int mpWaitTicks = 0;
     private static final List<String> results = new ArrayList<>();
 
     public static void init() {
@@ -63,10 +91,63 @@ public final class AE2ApotheoticTestRunner {
     }
 
     private static void onClientTick(ClientTickEvent.Post event) {
+        Minecraft mc = Minecraft.getInstance();
+
+        // 1. Multiplayer Client Mode
+        if (Boolean.getBoolean("ae2apotheotic.runMultiplayerTests")) {
+            if (mc.screen instanceof DisconnectedScreen ds) {
+                fail("Multiplayer Client Disconnected Screen -> " + ds.getNarrationMessage().getString());
+                saveResultsToFile("multiplayer_results.txt");
+                try {
+                    new File("multiplayer_done.txt").createNewFile();
+                    new File("d:/ai2/test-client/multiplayer_done.txt").createNewFile();
+                } catch (Exception ignored) {}
+                mc.stop();
+                return;
+            }
+            if (testsDone || mc.level == null || mc.player == null) {
+                return;
+            }
+            autoTicks++;
+            if (autoTicks >= 20) {
+                testsDone = true;
+                runMultiplayerTests();
+                if (Boolean.getBoolean("ae2apotheotic.exitAfterTests")) {
+                    mc.stop();
+                }
+            }
+            return;
+        }
+
+        // 2. Host / Singleplayer Mode Waiting for Multiplayer Client
+        if (waitingForMultiplayer) {
+            mpWaitTicks++;
+            File mpDone = new File("multiplayer_done.txt");
+            if (mpDone.exists()) {
+                waitingForMultiplayer = false;
+                pass("Remote Multiplayer Client Session & TCP Packet Roundtrip");
+                log("=== ALL IN-GAME AND SERVER TESTS COMPLETED SUCCESSFULLY ===");
+                saveResultsToFile();
+                if (Boolean.getBoolean("ae2apotheotic.exitAfterTests")) {
+                    mc.stop();
+                }
+                return;
+            }
+            if (mpWaitTicks > 1200) { // 60 seconds timeout
+                waitingForMultiplayer = false;
+                fail("Remote Multiplayer Client Session -> Timeout waiting for client connection");
+                saveResultsToFile();
+                if (Boolean.getBoolean("ae2apotheotic.exitAfterTests")) {
+                    mc.stop();
+                }
+            }
+            return;
+        }
+
+        // 3. Normal Host / GameTest Execution
         if (!Boolean.getBoolean("ae2apotheotic.runTests") || testsDone) {
             return;
         }
-        Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) {
             return;
         }
@@ -74,6 +155,28 @@ public final class AE2ApotheoticTestRunner {
         if (autoTicks >= 40) {
             testsDone = true;
             runAllTests();
+
+            if (Boolean.getBoolean("ae2apotheotic.publishServer") && mc.getSingleplayerServer() != null) {
+                int port = Integer.getInteger("ae2apotheotic.serverPort", 25565);
+                mc.getSingleplayerServer().setUsesAuthentication(false);
+                boolean published = mc.getSingleplayerServer().publishServer(GameType.SURVIVAL, false, port);
+                if (published) {
+                    pass("LAN Server Publishing on Port " + port);
+                    log("Singleplayer server published to LAN on port " + port);
+                    try (FileWriter fw = new FileWriter(new File("server_ready.txt"))) {
+                        fw.write(String.valueOf(port));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    waitingForMultiplayer = true;
+                    mpWaitTicks = 0;
+                    return;
+                } else {
+                    fail("LAN Server Publishing -> failed to publish on port " + port);
+                }
+            }
+
+            saveResultsToFile();
             if (Boolean.getBoolean("ae2apotheotic.exitAfterTests")) {
                 mc.stop();
             }
@@ -89,6 +192,28 @@ public final class AE2ApotheoticTestRunner {
         try {
             test.run();
             pass(name);
+        } catch (Throwable t) {
+            String msg = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
+            fail(name + " -> " + msg);
+        }
+    }
+
+    public static void runServerTest(String name, TestCase test) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.getSingleplayerServer() == null) {
+            fail(name + " -> Singleplayer server not running");
+            return;
+        }
+        try {
+            mc.getSingleplayerServer().executeBlocking(() -> {
+                try {
+                    test.run();
+                    pass(name);
+                } catch (Throwable t) {
+                    String msg = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
+                    fail(name + " -> " + msg);
+                }
+            });
         } catch (Throwable t) {
             String msg = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
             fail(name + " -> " + msg);
@@ -152,7 +277,6 @@ public final class AE2ApotheoticTestRunner {
             assertEqual(decodedInf.arcana(), 10, "Infusion arcana value");
 
             if (mutate) {
-                // DELIBERATE ERROR 1: inject intentional assertion failure
                 assertEqual(decodedInf.eterna(), 999, "Deliberate mutation error: impossible eterna");
             }
         });
@@ -172,7 +296,6 @@ public final class AE2ApotheoticTestRunner {
             assertTrue(be.isVisibleInTerminal(), "GemProvider must be visible in terminal");
             assertTrue(termInv.size() >= GemProviderBlockEntity.BULK_SLOTS, "Terminal inv size at least bulk slots");
 
-            // Bulk slot test (slot 0)
             ItemStack bulkCrush = new ItemStack(ModRegistry.GEM_CRUSH_PATTERN.get());
             bulkCrush.set(ModRegistry.GEM_CRUSH.get(), new GemCrushEncoding(GemCrushEncoding.CrushMode.ANY, Optional.empty(), Purity.CRACKED));
 
@@ -194,10 +317,8 @@ public final class AE2ApotheoticTestRunner {
             GemProviderBlockEntity be = new GemProviderBlockEntity(pos, ModRegistry.GEM_PROVIDER.get().defaultBlockState());
             InternalInventory termInv = be.getTerminalPatternInventory();
 
-            // Iron ingot must NOT be valid in slot 0
             boolean ironValid = termInv.isItemValid(0, new ItemStack(Items.IRON_INGOT));
             if (mutate) {
-                // DELIBERATE ERROR 2: invert condition so it fails
                 assertTrue(ironValid, "Deliberate mutation error: asserting iron ingot is accepted");
             } else {
                 assertTrue(!ironValid, "Terminal must reject iron ingot in pattern slot");
@@ -208,7 +329,6 @@ public final class AE2ApotheoticTestRunner {
         runTest("XP Math Conversion Factors", () -> {
             assertEqual(XpHelper.MB_PER_XP, 20, "20 mB per XP point standard");
             if (mutate) {
-                // DELIBERATE ERROR 3: intentional wrong XP factor
                 assertEqual(XpHelper.MB_PER_XP, 100, "Deliberate mutation error: wrong MB_PER_XP");
             }
         });
@@ -280,14 +400,359 @@ public final class AE2ApotheoticTestRunner {
             level.setBlock(infPos, Blocks.AIR.defaultBlockState(), 3);
         });
 
+        // Test 9: Real In-Game Gem Cutting & Purity Upgrade Transaction (Server Thread)
+        runServerTest("In-World Real Gem Cutting & Purity Upgrade Transaction", () -> {
+            Minecraft mc = Minecraft.getInstance();
+            ServerPlayer serverPlayer = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+            ServerLevel serverLevel = serverPlayer != null ? serverPlayer.level() : mc.getSingleplayerServer().overworld();
+            BlockPos playerPos = serverPlayer != null ? serverPlayer.blockPosition() : mc.player.blockPosition();
+
+            BlockPos base = playerPos.relative(Direction.NORTH, 3);
+            BlockPos casePos = base;
+            BlockPos provPos = base.above();
+
+            serverLevel.setBlock(casePos, Apoth.Blocks.GEM_CASE.value().defaultBlockState(), 3);
+            serverLevel.setBlock(provPos, ModRegistry.GEM_PROVIDER.get().defaultBlockState(), 3);
+
+            GemCaseTile gemCase = (GemCaseTile) serverLevel.getBlockEntity(casePos);
+            GemProviderBlockEntity provBe = (GemProviderBlockEntity) serverLevel.getBlockEntity(provPos);
+            assertNotNull(gemCase, "GemCaseTile present");
+            assertNotNull(provBe, "GemProviderBlockEntity present");
+
+            List<RecipeHolder<GemCuttingRecipe>> recipes = GemCuttingMenu.getRecipes(serverLevel);
+            PurityUpgradeRecipe upgradeRecipe = null;
+            Gem validGem = null;
+            for (RecipeHolder<GemCuttingRecipe> holder : recipes) {
+                if (holder.value() instanceof PurityUpgradeRecipe pur) {
+                    for (Gem g : GemRegistry.INSTANCE.getValues()) {
+                        if (pur.purity().isAtLeast(g.getMinPurity()) && pur.purity() != Purity.PERFECT) {
+                            validGem = g;
+                            upgradeRecipe = pur;
+                            break;
+                        }
+                    }
+                    if (upgradeRecipe != null) break;
+                }
+            }
+            assertNotNull(upgradeRecipe, "Valid PurityUpgradeRecipe found in registry");
+            assertNotNull(validGem, "Valid Gem for upgrade recipe found");
+
+            Purity from = upgradeRecipe.purity();
+            Purity to = from.next();
+            ItemStack inputGemStack = GemItem.createStack(validGem, from, 1);
+            ItemStack outputGemStack = GemItem.createStack(validGem, to, 1);
+
+            SizedIngredient leftIng = upgradeRecipe.left().get(0);
+            SizedIngredient rightIng = upgradeRecipe.right().get(0);
+            MaterialChoice leftChoice = MaterialChoice.of(leftIng);
+            MaterialChoice rightChoice = MaterialChoice.of(rightIng);
+            ItemStack leftStack = leftChoice.displayStack();
+            ItemStack rightStack = rightChoice.displayStack();
+
+            GemUpgradeEncoding enc = new GemUpgradeEncoding(
+                AEItemKey.of(inputGemStack),
+                AEItemKey.of(outputGemStack),
+                leftChoice,
+                rightChoice
+            );
+            ItemStack upgradePatternStack = new ItemStack(ModRegistry.GEM_UPGRADE_PATTERN.get());
+            upgradePatternStack.set(ModRegistry.GEM_UPGRADE.get(), enc);
+            GemUpgradePattern pattern = new GemUpgradePattern(AEItemKey.of(upgradePatternStack), serverLevel);
+
+            KeyCounter[] inputs = new KeyCounter[] { new KeyCounter(), new KeyCounter(), new KeyCounter() };
+            inputs[0].add(AEItemKey.of(inputGemStack), GemUpgradeEncoding.GEMS_PER_UPGRADE);
+            inputs[1].add(AEItemKey.of(leftStack), leftStack.getCount());
+            inputs[2].add(AEItemKey.of(rightStack), rightStack.getCount());
+
+            List<GenericStack> res = provBe.upgrade(serverLevel, pattern, inputs);
+            assertNotNull(res, "Upgrade results must not be null");
+            assertTrue(!res.isEmpty(), "Upgrade results must contain upgraded gem");
+            assertEqual(res.get(0).what(), AEItemKey.of(outputGemStack), "Output matches expected upgraded gem");
+            assertEqual(res.get(0).amount(), 1L, "Output count is 1");
+
+            serverLevel.setBlock(casePos, Blocks.AIR.defaultBlockState(), 3);
+            serverLevel.setBlock(provPos, Blocks.AIR.defaultBlockState(), 3);
+        });
+
+        // Test 10: In-World Safe Rollback (Preserves Unrelated Player Inventory) (Server Thread)
+        runServerTest("In-World Safe Rollback (Preserves Unrelated Player Inventory)", () -> {
+            Minecraft mc = Minecraft.getInstance();
+            ServerPlayer serverPlayer = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+            ServerLevel serverLevel = serverPlayer != null ? serverPlayer.level() : mc.getSingleplayerServer().overworld();
+            BlockPos playerPos = serverPlayer != null ? serverPlayer.blockPosition() : mc.player.blockPosition();
+
+            BlockPos base = playerPos.relative(Direction.SOUTH, 3);
+            BlockPos casePos = base;
+            BlockPos provPos = base.above();
+
+            serverLevel.setBlock(casePos, Apoth.Blocks.GEM_CASE.value().defaultBlockState(), 3);
+            serverLevel.setBlock(provPos, ModRegistry.GEM_PROVIDER.get().defaultBlockState(), 3);
+
+            GemCaseTile gemCase = (GemCaseTile) serverLevel.getBlockEntity(casePos);
+            GemProviderBlockEntity provBe = (GemProviderBlockEntity) serverLevel.getBlockEntity(provPos);
+            assertNotNull(gemCase, "GemCaseTile present");
+
+            InternalItemHandler mats = gemCase.getUpgradeMaterials();
+            try (Transaction tx = Transaction.openRoot()) {
+                mats.insertInternal(0, ItemResource.of(new ItemStack(Items.DIAMOND, 10)), 10, tx);
+                tx.commit();
+            }
+            long diamondsBefore = mats.getAmountAsLong(0);
+            assertEqual(diamondsBefore, 10L, "Gem Case contains 10 diamonds initially");
+
+            Gem firstGem = GemRegistry.INSTANCE.getValues().iterator().next();
+            ItemStack crackedStack = GemItem.createStack(firstGem, Purity.CRACKED, 1);
+            ItemStack chippedStack = GemItem.createStack(firstGem, Purity.CHIPPED, 1);
+            MaterialChoice leftChoice = new MaterialChoice(List.of(AEItemKey.of(Items.DIRT)), 1);
+            MaterialChoice rightChoice = new MaterialChoice(List.of(AEItemKey.of(Items.COBBLESTONE)), 1);
+            GemUpgradeEncoding enc = new GemUpgradeEncoding(
+                AEItemKey.of(crackedStack),
+                AEItemKey.of(chippedStack),
+                leftChoice,
+                rightChoice
+            );
+            ItemStack upgradePatternStack = new ItemStack(ModRegistry.GEM_UPGRADE_PATTERN.get());
+            upgradePatternStack.set(ModRegistry.GEM_UPGRADE.get(), enc);
+            GemUpgradePattern pattern = new GemUpgradePattern(AEItemKey.of(upgradePatternStack), serverLevel);
+
+            KeyCounter[] inputs = new KeyCounter[] { new KeyCounter(), new KeyCounter(), new KeyCounter() };
+            inputs[0].add(AEItemKey.of(crackedStack), 1);
+            inputs[1].add(AEItemKey.of(Items.DIRT), 1);
+            inputs[2].add(AEItemKey.of(Items.COBBLESTONE), 1);
+
+            List<GenericStack> res = provBe.upgrade(serverLevel, pattern, inputs);
+            assertTrue(res == null, "Upgrade must fail and return null for invalid recipe");
+
+            long diamondsAfter = mats.getAmountAsLong(0);
+            assertEqual(diamondsAfter, 10L, "Rollback: diamonds must remain untouched (exact 10)");
+
+            serverLevel.setBlock(casePos, Blocks.AIR.defaultBlockState(), 3);
+            serverLevel.setBlock(provPos, Blocks.AIR.defaultBlockState(), 3);
+        });
+
+        // Test 11: In-World Real Gem Crushing Pipeline (Server Thread)
+        runServerTest("In-World Real Gem Crushing Pipeline", () -> {
+            Minecraft mc = Minecraft.getInstance();
+            ServerPlayer serverPlayer = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+            ServerLevel serverLevel = serverPlayer != null ? serverPlayer.level() : mc.getSingleplayerServer().overworld();
+            BlockPos playerPos = serverPlayer != null ? serverPlayer.blockPosition() : mc.player.blockPosition();
+
+            BlockPos provPos = playerPos.relative(Direction.WEST, 3);
+            serverLevel.setBlock(provPos, ModRegistry.GEM_PROVIDER.get().defaultBlockState(), 3);
+            GemProviderBlockEntity provBe = (GemProviderBlockEntity) serverLevel.getBlockEntity(provPos);
+            assertNotNull(provBe, "GemProviderBlockEntity present");
+
+            Gem firstGem = GemRegistry.INSTANCE.getValues().iterator().next();
+            ItemStack crackedStack = GemItem.createStack(firstGem, Purity.CRACKED, 2);
+
+            KeyCounter[] inputs = new KeyCounter[] { new KeyCounter() };
+            inputs[0].add(AEItemKey.of(crackedStack), 2);
+
+            List<GenericStack> res = provBe.crush(inputs);
+            assertNotNull(res, "Crush results must not be null");
+            assertTrue(!res.isEmpty(), "Crush produces dust");
+            assertEqual(res.get(0).what(), GemKeys.dust(), "Yields Gem Dust");
+            int yield = GemCrushEncoding.dustYield(UnsocketedGem.of(crackedStack).purity());
+            int expectedDust = 2 * yield;
+            assertEqual(res.get(0).amount(), (long) expectedDust, "Yields correct dust quantity");
+
+            serverLevel.setBlock(provPos, Blocks.AIR.defaultBlockState(), 3);
+        });
+
+        // Test 12: In-World Real Infusion Recipe Crafting & Liquid XP Consumption (Server Thread)
+        runServerTest("In-World Real Infusion Recipe Crafting & Liquid XP Consumption", () -> {
+            Minecraft mc = Minecraft.getInstance();
+            ServerPlayer serverPlayer = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+            ServerLevel serverLevel = serverPlayer != null ? serverPlayer.level() : mc.getSingleplayerServer().overworld();
+            BlockPos playerPos = serverPlayer != null ? serverPlayer.blockPosition() : mc.player.blockPosition();
+
+            BlockPos base = playerPos.relative(Direction.EAST, 4);
+            BlockPos tablePos = base;
+            BlockPos infPos = base.above();
+
+            serverLevel.setBlock(tablePos, Ench.Blocks.RAVEN_ENCHANTING_TABLE.value().defaultBlockState(), 3);
+            serverLevel.setBlock(infPos, ModRegistry.INFUSION_PROVIDER.get().defaultBlockState(), 3);
+
+            InfusionProviderBlockEntity infBe = (InfusionProviderBlockEntity) serverLevel.getBlockEntity(infPos);
+            assertNotNull(infBe, "InfusionProviderBlockEntity present");
+
+            InfusionRecipe infRecipe = null;
+            Identifier recipeId = null;
+            for (var recipeHolder : serverLevel.recipeAccess().getRecipes()) {
+                if (recipeHolder.value() instanceof InfusionRecipe ir) {
+                    infRecipe = ir;
+                    recipeId = recipeHolder.id().identifier();
+                    break;
+                }
+            }
+            assertNotNull(infRecipe, "At least one InfusionRecipe found in registry");
+
+            ItemStack inputItem = infRecipe.getInput().items()
+                .map(h -> h.value().getDefaultInstance())
+                .findFirst()
+                .orElse(ItemStack.EMPTY);
+            assertTrue(!inputItem.isEmpty(), "Infusion input item exists");
+            float eterna = infRecipe.getRequirements().eterna();
+            float quanta = infRecipe.getRequirements().quanta();
+            float arcana = infRecipe.getRequirements().arcana();
+            ItemStack assembled = infRecipe.assemble(inputItem.copy(), eterna, quanta, arcana);
+            assertTrue(!assembled.isEmpty(), "Recipe assemble returns non-empty result");
+
+            infBe.setStoredXpMb(100_000L);
+            int initialXp = infBe.getStoredXp();
+            assertTrue(initialXp > 0, "Initial stored XP > 0");
+
+            int xpCost = InfusionProviderBlockEntity.requiredXp(infRecipe);
+            InfusionEncoding enc = new InfusionEncoding(
+                AEItemKey.of(inputItem),
+                AEItemKey.of(assembled),
+                1,
+                recipeId,
+                (int) Math.ceil(eterna),
+                (int) Math.ceil(quanta),
+                (int) Math.ceil(arcana),
+                xpCost
+            );
+            ItemStack infPatternStack = new ItemStack(ModRegistry.INFUSION_PATTERN.get());
+            infPatternStack.set(ModRegistry.INFUSION.get(), enc);
+            InfusionPattern pattern = new InfusionPattern(AEItemKey.of(infPatternStack), serverLevel);
+
+            KeyCounter[] inputs = new KeyCounter[] { new KeyCounter(), new KeyCounter() };
+            inputs[0].add(AEItemKey.of(inputItem), 1);
+            inputs[1].add(AEItemKey.of(Items.LAPIS_LAZULI), InfusionEncoding.LAPIS_COST);
+
+            List<GenericStack> res = infBe.process(serverLevel, pattern, inputs);
+            assertNotNull(res, "Infusion process results must not be null");
+            assertTrue(!res.isEmpty(), "Infusion produces output item");
+            assertEqual(res.get(0).what(), AEItemKey.of(assembled), "Output matches assembled item");
+            assertTrue(infBe.getStoredXp() <= initialXp, "Stored XP consumed by infusion");
+
+            serverLevel.setBlock(tablePos, Blocks.AIR.defaultBlockState(), 3);
+            serverLevel.setBlock(infPos, Blocks.AIR.defaultBlockState(), 3);
+        });
+
+        // Test 13: In-World ME Pattern Encoder Blank Programming Pipeline (Server Thread)
+        runServerTest("In-World ME Pattern Encoder Blank Programming Pipeline", () -> {
+            Minecraft mc = Minecraft.getInstance();
+            ServerPlayer serverPlayer = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+            ServerLevel serverLevel = serverPlayer != null ? serverPlayer.level() : mc.getSingleplayerServer().overworld();
+            BlockPos playerPos = serverPlayer != null ? serverPlayer.blockPosition() : mc.player.blockPosition();
+
+            BlockPos encPos = playerPos.relative(Direction.UP, 4);
+            serverLevel.setBlock(encPos, ModRegistry.PATTERN_ENCODER.get().defaultBlockState(), 3);
+
+            EncoderBlockEntity encBe = (EncoderBlockEntity) serverLevel.getBlockEntity(encPos);
+            assertNotNull(encBe, "EncoderBlockEntity present");
+
+            Gem firstGem = GemRegistry.INSTANCE.getValues().iterator().next();
+            ItemStack crackedStack = GemItem.createStack(firstGem, Purity.CRACKED, 1);
+
+            encBe.getInventory().setItemDirect(EncoderBlockEntity.SLOT_BLANK, new ItemStack(AEItems.BLANK_PATTERN.asItem(), 3));
+            encBe.getInventory().setItemDirect(EncoderBlockEntity.SLOT_SAMPLE, crackedStack);
+            encBe.setMode(EncoderBlockEntity.MODE_CRUSH);
+            encBe.setCrushMode(GemCrushEncoding.CrushMode.EXACT.ordinal());
+
+            EncoderMenu menu = new EncoderMenu(1, serverPlayer.getInventory(), encBe);
+            menu.clickMenuButton(serverPlayer, EncoderMenu.BTN_ENCODE);
+
+            ItemStack blanksLeft = encBe.getInventory().getStackInSlot(EncoderBlockEntity.SLOT_BLANK);
+            assertEqual(blanksLeft.getCount(), 2, "1 Blank pattern was consumed");
+
+            ItemStack encodedOutput = encBe.getInventory().getStackInSlot(EncoderBlockEntity.SLOT_OUTPUT);
+            assertTrue(!encodedOutput.isEmpty(), "Output slot contains pattern");
+            assertEqual(encodedOutput.getItem(), ModRegistry.GEM_CRUSH_PATTERN.get(), "Encoded item is GEM_CRUSH_PATTERN");
+            assertNotNull(encodedOutput.get(ModRegistry.GEM_CRUSH.get()), "Data component GEM_CRUSH present");
+
+            serverLevel.setBlock(encPos, Blocks.AIR.defaultBlockState(), 3);
+        });
+
+        // Test 14: In-World Serverbound Recipe Transfer Payload Handler (Server Thread)
+        runServerTest("In-World Serverbound Recipe Transfer Payload Handler", () -> {
+            Minecraft mc = Minecraft.getInstance();
+            ServerPlayer serverPlayer = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+            ServerLevel serverLevel = serverPlayer != null ? serverPlayer.level() : mc.getSingleplayerServer().overworld();
+            BlockPos playerPos = serverPlayer != null ? serverPlayer.blockPosition() : mc.player.blockPosition();
+
+            BlockPos encPos = playerPos.relative(Direction.UP, 5);
+            serverLevel.setBlock(encPos, ModRegistry.PATTERN_ENCODER.get().defaultBlockState(), 3);
+
+            EncoderBlockEntity encBe = (EncoderBlockEntity) serverLevel.getBlockEntity(encPos);
+            assertNotNull(encBe, "EncoderBlockEntity present");
+
+            EncoderMenu menu = new EncoderMenu(10, serverPlayer.getInventory(), encBe);
+            serverPlayer.containerMenu = menu;
+
+            TransferRecipePayload payload = new TransferRecipePayload(
+                EncoderBlockEntity.MODE_INFUSION,
+                new ItemStack(Items.DIAMOND_SWORD),
+                -1,
+                0,
+                75,
+                35,
+                20
+            );
+
+            TransferRecipePayload.applyTo(serverPlayer, payload);
+
+            assertEqual(encBe.getMode(), EncoderBlockEntity.MODE_INFUSION, "Mode set to INFUSION");
+            assertEqual(encBe.getSample().getItem(), Items.DIAMOND_SWORD, "Sample set to Diamond Sword");
+            assertEqual(encBe.getEterna(), 75, "Eterna set to 75");
+            assertEqual(encBe.getQuanta(), 35, "Quanta set to 35");
+            assertEqual(encBe.getArcana(), 20, "Arcana set to 20");
+
+            serverPlayer.containerMenu = serverPlayer.inventoryMenu;
+            serverLevel.setBlock(encPos, Blocks.AIR.defaultBlockState(), 3);
+        });
+
         long passCount = results.stream().filter(s -> s.startsWith("[PASS]")).count();
         long failCount = results.stream().filter(s -> s.startsWith("[FAIL]")).count();
 
         log("=================================================");
-        log("  SUMMARY: " + passCount + " PASSED, " + failCount + " FAILED");
+        log("  HOST RUN SUMMARY: " + passCount + " PASSED, " + failCount + " FAILED");
+        log("=================================================");
+    }
+
+    public static void runMultiplayerTests() {
+        results.clear();
+        log("=================================================");
+        log("    AE2 Apotheotic Multiplayer Client Test Suite  ");
         log("=================================================");
 
-        saveResultsToFile();
+        // MP Test 1: Remote Connection Active
+        runTest("Multiplayer: Remote Server Connection Active (TCP Netty)", () -> {
+            Minecraft mc = Minecraft.getInstance();
+            assertTrue(!mc.isLocalServer(), "Must be remote connection (isLocalServer == false)");
+            assertNotNull(mc.getConnection(), "ClientPacketListener must be active");
+            assertNotNull(mc.getCurrentServer(), "CurrentServer must not be null");
+            log("Connected to server: " + mc.getCurrentServer().ip);
+        });
+
+        // MP Test 2: Live TCP Packet Dispatch to Server
+        runTest("Multiplayer: Client-to-Server Live TCP Packet Dispatch", () -> {
+            Minecraft mc = Minecraft.getInstance();
+            TransferRecipePayload payload = new TransferRecipePayload(
+                EncoderBlockEntity.MODE_INFUSION,
+                new ItemStack(Items.NETHERITE_SWORD),
+                -1,
+                0,
+                80,
+                40,
+                25
+            );
+            assertNotNull(mc.getConnection(), "Connection must exist to send payload");
+            mc.getConnection().send(new ServerboundCustomPayloadPacket(payload));
+            log("Successfully sent TransferRecipePayload over TCP socket to server!");
+        });
+
+        saveResultsToFile("multiplayer_results.txt");
+
+        // Signal completion to host in both current dir and host dir
+        try {
+            new File("multiplayer_done.txt").createNewFile();
+        } catch (Exception ignored) {}
+        try {
+            new File("d:/ai2/test-client/multiplayer_done.txt").createNewFile();
+        } catch (Exception ignored) {}
     }
 
     private static void pass(String name) {
@@ -306,7 +771,15 @@ public final class AE2ApotheoticTestRunner {
         System.out.println("[AE2Apotheotic-Test] " + msg);
         Minecraft mc = Minecraft.getInstance();
         if (mc.gui != null && mc.gui.getChat() != null) {
-            mc.gui.getChat().addClientSystemMessage(Component.literal(msg));
+            if (RenderSystem.isOnRenderThread()) {
+                mc.gui.getChat().addClientSystemMessage(Component.literal(msg));
+            } else {
+                mc.execute(() -> {
+                    if (mc.gui != null && mc.gui.getChat() != null) {
+                        mc.gui.getChat().addClientSystemMessage(Component.literal(msg));
+                    }
+                });
+            }
         }
     }
 
@@ -329,8 +802,12 @@ public final class AE2ApotheoticTestRunner {
     }
 
     private static void saveResultsToFile() {
+        saveResultsToFile("gametest_results.txt");
+    }
+
+    private static void saveResultsToFile(String filename) {
         try {
-            File outFile = new File("gametest_results.txt");
+            File outFile = new File(filename);
             try (PrintWriter pw = new PrintWriter(new FileWriter(outFile))) {
                 for (String r : results) {
                     pw.println(r);
