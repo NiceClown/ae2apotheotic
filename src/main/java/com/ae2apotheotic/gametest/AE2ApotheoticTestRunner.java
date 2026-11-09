@@ -26,7 +26,6 @@ import dev.shadowsoffire.apotheosis.socket.gem.Gem;
 import dev.shadowsoffire.apotheosis.socket.gem.GemItem;
 import dev.shadowsoffire.apotheosis.socket.gem.GemRegistry;
 import dev.shadowsoffire.apotheosis.socket.gem.Purity;
-import dev.shadowsoffire.apotheosis.socket.gem.UnsocketedGem;
 import dev.shadowsoffire.apotheosis.socket.gem.cutting.GemCuttingMenu;
 import dev.shadowsoffire.apotheosis.socket.gem.cutting.GemCuttingRecipe;
 import dev.shadowsoffire.apotheosis.socket.gem.cutting.PurityUpgradeRecipe;
@@ -483,6 +482,9 @@ public final class AE2ApotheoticTestRunner {
             BlockPos casePos = base;
             BlockPos provPos = base.above();
 
+            // Reset the position first so a block entity left over from an earlier (possibly failed) run cannot leak items.
+            serverLevel.setBlock(casePos, Blocks.AIR.defaultBlockState(), 3);
+            serverLevel.setBlock(provPos, Blocks.AIR.defaultBlockState(), 3);
             serverLevel.setBlock(casePos, Apoth.Blocks.GEM_CASE.value().defaultBlockState(), 3);
             serverLevel.setBlock(provPos, ModRegistry.GEM_PROVIDER.get().defaultBlockState(), 3);
 
@@ -499,13 +501,15 @@ public final class AE2ApotheoticTestRunner {
             assertEqual(diamondsBefore, 10L, "Gem Case contains 10 diamonds initially");
 
             Gem firstGem = GemRegistry.INSTANCE.getValues().iterator().next();
-            ItemStack crackedStack = GemItem.createStack(firstGem, Purity.CRACKED, 1);
-            ItemStack chippedStack = GemItem.createStack(firstGem, Purity.CHIPPED, 1);
+            // Gem.toStack clamps the purity to the gem's minimum, so pick that minimum as the "from" purity.
+            Purity from = firstGem.getMinPurity();
+            ItemStack inputStack = GemItem.createStack(firstGem, from, 1);
+            ItemStack outputStack = GemItem.createStack(firstGem, from.next(), 1);
             MaterialChoice leftChoice = new MaterialChoice(List.of(AEItemKey.of(Items.DIRT)), 1);
             MaterialChoice rightChoice = new MaterialChoice(List.of(AEItemKey.of(Items.COBBLESTONE)), 1);
             GemUpgradeEncoding enc = new GemUpgradeEncoding(
-                AEItemKey.of(crackedStack),
-                AEItemKey.of(chippedStack),
+                AEItemKey.of(inputStack),
+                AEItemKey.of(outputStack),
                 leftChoice,
                 rightChoice
             );
@@ -514,7 +518,7 @@ public final class AE2ApotheoticTestRunner {
             GemUpgradePattern pattern = new GemUpgradePattern(AEItemKey.of(upgradePatternStack), serverLevel);
 
             KeyCounter[] inputs = new KeyCounter[] { new KeyCounter(), new KeyCounter(), new KeyCounter() };
-            inputs[0].add(AEItemKey.of(crackedStack), 1);
+            inputs[0].add(AEItemKey.of(inputStack), 1);
             inputs[1].add(AEItemKey.of(Items.DIRT), 1);
             inputs[2].add(AEItemKey.of(Items.COBBLESTONE), 1);
 
@@ -541,13 +545,15 @@ public final class AE2ApotheoticTestRunner {
             assertNotNull(provBe, "GemProviderBlockEntity present");
 
             Gem firstGem = GemRegistry.INSTANCE.getValues().iterator().next();
-            ItemStack crackedStack = GemItem.createStack(firstGem, Purity.CRACKED, 2);
+            // Gem.toStack clamps to the gem's minimum purity, so use exactly that purity in the pattern.
+            Purity from = firstGem.getMinPurity();
+            ItemStack gemStack = GemItem.createStack(firstGem, from, 2);
 
             KeyCounter[] inputs = new KeyCounter[] { new KeyCounter() };
-            inputs[0].add(AEItemKey.of(crackedStack), 2);
+            inputs[0].add(AEItemKey.of(gemStack), 2);
 
             GemCrushEncoding crushEnc = new GemCrushEncoding(GemCrushEncoding.CrushMode.EXACT,
-                Optional.of(AEItemKey.of(GemItem.createStack(firstGem, Purity.CRACKED, 1))), Purity.CRACKED);
+                Optional.of(AEItemKey.of(GemItem.createStack(firstGem, from, 1))), from);
             ItemStack crushPatternItem = new ItemStack(ModRegistry.GEM_CRUSH_PATTERN.get());
             crushPatternItem.set(ModRegistry.GEM_CRUSH.get(), crushEnc);
             GemCrushPattern crushPattern = new GemCrushPattern(AEItemKey.of(crushPatternItem), serverLevel);
@@ -556,7 +562,7 @@ public final class AE2ApotheoticTestRunner {
             assertNotNull(res, "Crush results must not be null");
             assertTrue(!res.isEmpty(), "Crush produces dust");
             assertEqual(res.get(0).what(), GemKeys.dust(), "Yields Gem Dust");
-            int yield = GemCrushEncoding.dustYield(UnsocketedGem.of(crackedStack).purity());
+            int yield = GemCrushEncoding.dustYield(from);
             int expectedDust = 2 * yield;
             assertEqual(res.get(0).amount(), (long) expectedDust, "Yields correct dust quantity");
 
