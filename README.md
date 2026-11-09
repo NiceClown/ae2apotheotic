@@ -20,6 +20,8 @@ An addon for **Applied Energistics 2** that connects AE2 autocrafting directly t
   * **Placebo** (`10.0.2+`)
   * **GuideME** (`26.1.15-beta+`)
 * **Optional Integrations:**
+  * **JEI** (`29.5.0.26+`) — recipe transfer buttons for Gem Cutting and Table Infusion recipes.
+  * **Jade** (`26.0.0+`) — in-world provider and encoder tooltips.
   * **Just Dire Things** (supported for adjacent liquid experience storage via the Experience Holder)
 
 
@@ -57,8 +59,8 @@ The addon includes comprehensive in-game documentation powered by **GuideME**:
 The **Apotheotic Pattern Encoder** interface features a 210px layout designed to accommodate long localized item names and complex crafting recipes:
 * **Sample Slot** (top-left): Place a gem or infusion base item.
 * **AE2 Blank Patterns Slot** (bottom-left): Supplies blank patterns.
-* **Encoded Pattern Output Slot** (bottom-right): Holds the encoded output card.
-* **Encode Button**: Encodes one blank pattern (or overwrites a pattern in the output slot).
+* **Encoded Pattern Output Slot** (bottom-right): Holds the encoded output card. Take the finished pattern out before encoding another one.
+* **Encode Button**: Encodes one blank pattern into the output slot. It never overwrites a pattern that is already there.
 
 ### 1. Gem Upgrading (Gem Case)
 1. Insert any gem of the target type into the sample slot. Use the navigation buttons to select the starting purity tier (defaults to the sample's purity).
@@ -77,7 +79,7 @@ The Gem Pattern Provider features a clean, categorized architecture organized pe
 * **Bulk Crushing:** 27 slots for any crushing pattern.
 * **Smart Auto-Routing:** Shift-clicking a pattern in your inventory puts it into its slot and opens that category.
 * Patterns are stored by gem id, so adding/removing gems never moves them. Old saves are sorted in automatically.
-* Because of this layout the Gem Pattern Provider is **not** shown in the ME Pattern Access Terminal.
+* The Gem Pattern Provider is also shown in the **ME Pattern Access Terminal**; its categorized slots are exposed as one composite inventory, so patterns can be viewed and managed from there too.
 
 ### 2. Gem Dust (Crushing)
 Crushes gems into gem dust. Autocrafting guarantees the minimum threshold matching native Apotheosis salvaging recipes:
@@ -108,7 +110,7 @@ Crushing is performed internally by the Gem Pattern Provider — a Gem Case is n
 #### Experience Handling
 The experience cost matches table enchanting (`level = max(ceil(recipe Eterna), 3)`). XP is consumed automatically in this strict order:
 1. **ME Network Storage (Primary):** Pulls liquid experience directly from connected ME storage (`c:experience` / `neoforge:experience`) using ME network energy and storage services.
-2. **Internal XP Buffer:** Provider buffer (configurable capacity, default 10,000 pts). Manageable via GUI buttons (**"+1 lvl"**, **"+All"**, **"Take"**) or piped in via fluid pipes.
+2. **Internal XP Buffer:** Provider buffer (configurable capacity, default 1,000,000 pts). Manageable via GUI buttons (**"+1 lvl"**, **"+All"**, **"Take"**) or piped in via fluid pipes.
 3. **Adjacent Fluid Tanks:** External tanks holding liquid experience (20 mB = 1 XP point) — such as the **Experience Holder** from **Just Dire Things**.
 
 ---
@@ -125,7 +127,7 @@ The experience cost matches table enchanting (`level = max(ceil(recipe Eterna), 
 
 * `infusion.requiresExperience`: Whether infusion requires XP (default: `true`).
 * `infusion.experienceMultiplier`: Multiplier applied to the XP cost (default: `1.0`).
-* `infusion.bufferCapacity`: Capacity of the internal XP buffer in points (default: `10000`).
+* `infusion.bufferCapacity`: Capacity of the internal XP buffer in points (default: `1000000`).
 
 ---
 
@@ -136,7 +138,7 @@ Using Git Bash and Prism Launcher dependencies:
 ```bash
 ./build-local.sh
 ```
-Compiles against JDK 25 and NeoForge/Minecraft libraries, outputting `build/libs/ae2apotheotic-2.0.0.jar` and automatically updating local Prism instances.
+Compiles against JDK 25 and NeoForge/Minecraft libraries, outputting `build/libs/ae2apotheotic-2.2.0.jar` and automatically updating local Prism instances.
 
 ### Gradle Build
 Standard ModDevGradle configuration is included in `build.gradle` and `settings.gradle`.

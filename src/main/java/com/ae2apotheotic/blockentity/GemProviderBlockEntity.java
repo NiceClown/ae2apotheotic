@@ -60,7 +60,8 @@ import org.jspecify.annotations.Nullable;
  * patterns around) with a slot for each purity upgrade step plus one slot for crushing exactly that gem, and a
  * "bulk crushing" category with {@link #BULK_SLOTS} free slots for any crushing pattern.
  * <p>
- * Because of this layout the provider is not listed in the ME Pattern Access Terminal.
+ * All patterns are exposed through a composite terminal inventory, so the provider is listed in the ME Pattern
+ * Access Terminal as well.
  */
 public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
     public static final int FLAG_GEM_CASE = 1;
@@ -76,6 +77,8 @@ public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
     private final List<ItemStack> pendingMigration = new ArrayList<>();
     /** Last category opened in the GUI: a gem id, or null for bulk crushing. */
     private @Nullable Identifier lastCategory;
+    private @Nullable List<Gem> cachedGems;
+    private @Nullable List<Identifier> cachedGemIds;
 
     public GemProviderBlockEntity(BlockPos pos, BlockState state) {
         super(ModRegistry.GEM_PROVIDER_BE.get(), pos, state, BULK_SLOTS);
@@ -202,13 +205,22 @@ public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
 
     /** Category ids shown in the GUI: every registered gem (sorted) plus gems that only exist in this provider. */
     public List<Identifier> gemCategories() {
-        Set<Identifier> ids = new LinkedHashSet<>();
-        for (Gem gem : GemKeys.sortedGems()) {
-            Identifier id = gemId(gem);
-            if (id != null) {
-                ids.add(id);
+        List<Gem> gems = GemKeys.sortedGems();
+        if (cachedGemIds == null || !gems.equals(cachedGems)) {
+            List<Identifier> ids = new ArrayList<>(gems.size());
+            for (Gem gem : gems) {
+                Identifier id = gemId(gem);
+                if (id != null) {
+                    ids.add(id);
+                }
             }
+            cachedGems = gems;
+            cachedGemIds = List.copyOf(ids);
         }
+        if (gemPatterns.isEmpty()) {
+            return cachedGemIds;
+        }
+        Set<Identifier> ids = new LinkedHashSet<>(cachedGemIds);
         ids.addAll(gemPatterns.keySet());
         return List.copyOf(ids);
     }
@@ -498,8 +510,8 @@ public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
 
     @Override
     public @Nullable List<GenericStack> process(ServerLevel level, IPatternDetails details, KeyCounter[] inputs) {
-        if (details instanceof GemCrushPattern) {
-            return crush(inputs);
+        if (details instanceof GemCrushPattern crushPattern) {
+            return crush(crushPattern, inputs);
         }
         if (details instanceof GemUpgradePattern upgrade) {
             return upgrade(level, upgrade, inputs);
@@ -510,7 +522,11 @@ public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
     // ------------------------------------------------------------------------------------------------------------
     // Crushing
 
-    public @Nullable List<GenericStack> crush(KeyCounter[] inputs) {
+    public @Nullable List<GenericStack> crush(GemCrushPattern pattern, KeyCounter[] inputs) {
+        // AE2 patterns have a fixed output, so every accepted gem must give the amount encoded in the pattern.
+        // EXACT and SAME_PURITY only accept gems of the encoded purity; ANY accepts any purity but always yields the
+        // minimum amount, otherwise the actual output would exceed what the crafting job reserved.
+        int yield = GemCrushEncoding.dustYield(pattern.encoding().purity());
         long totalDust = 0;
         for (KeyCounter counter : inputs) {
             for (Object2LongMap.Entry<AEKey> entry : counter) {
@@ -521,7 +537,6 @@ public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
                 if (!gem.isValid()) {
                     return fail(ProviderProblem.INVALID_INPUTS);
                 }
-                int yield = GemCrushEncoding.dustYield(gem.purity());
                 totalDust += entry.getLongValue() * yield;
             }
         }
@@ -558,6 +573,9 @@ public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
         Purity to = from.next();
         if (inputs[0].get(enc.input()) < GemUpgradeEncoding.GEMS_PER_UPGRADE) {
             return fail(ProviderProblem.INVALID_INPUTS);
+        }
+        if (materialCount(inputs[1]) > 1 || materialCount(inputs[2]) > 1) {
+            return fail(ProviderProblem.MIXED_MATERIALS);
         }
         Material left = singleMaterial(inputs[1]);
         Material right = singleMaterial(inputs[2]);
@@ -607,6 +625,14 @@ public class GemProviderBlockEntity extends AbstractProviderBlockEntity {
             return List.of();
         }
         return List.of(new GenericStack(AEItemKey.of(result), result.getCount()));
+    }
+
+    private static int materialCount(KeyCounter counter) {
+        int count = 0;
+        for (Object2LongMap.Entry<AEKey> ignored : counter) {
+            count++;
+        }
+        return count;
     }
 
     private static @Nullable Material singleMaterial(KeyCounter counter) {

@@ -268,29 +268,32 @@ public class InfusionProviderBlockEntity extends AbstractProviderBlockEntity {
             return true;
         }
 
+        // Check that everything together can pay before changing any state, so a failed craft leaves the buffer and
+        // the adjacent tanks exactly as they were.
         long netSim = pullFromNetwork(needMb, true);
         long bufferAvail = storedXpMb;
         long neighborsAvail = getNearbyTankMb();
-
         if (netSim + bufferAvail + neighborsAvail < needMb) {
             return false;
         }
 
-        // 1. ME network first. The extracted experience goes through the buffer, so if the adjacent tanks
-        // cannot cover the rest nothing is lost: it simply stays in the buffer for the next attempt.
-        if (netSim > 0) {
-            storedXpMb += pullFromNetwork(Math.min(netSim, needMb), false);
+        // 1. ME network first. Extracted experience goes through the buffer, so nothing is lost if the rest of the
+        // payment fails; it simply stays there for the next attempt.
+        long fromNetwork = Math.min(netSim, needMb);
+        if (fromNetwork > 0) {
+            storedXpMb += pullFromNetwork(fromNetwork, false);
             setChanged();
         }
 
-        // 2. Internal buffer
+        // 2. Internal buffer.
         if (storedXpMb >= needMb) {
             storedXpMb -= needMb;
             setChanged();
             return true;
         }
 
-        // 3. Adjacent tanks (whole points only, so ask for a multiple of 20 mB)
+        // 3. Adjacent tanks (whole points only, so ask for a multiple of 20 mB). The transaction is only committed
+        // when the tanks can cover the whole deficit, otherwise it is rolled back.
         long deficit = needMb - storedXpMb;
         long request = (deficit + XpHelper.MB_PER_XP - 1) / XpHelper.MB_PER_XP * XpHelper.MB_PER_XP;
         try (Transaction tx = Transaction.openRoot()) {

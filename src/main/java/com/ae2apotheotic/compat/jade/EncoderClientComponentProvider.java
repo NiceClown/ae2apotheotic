@@ -25,21 +25,21 @@ public enum EncoderClientComponentProvider implements IBlockComponentProvider {
     public void appendTooltip(ITooltip tooltip, BlockAccessor accessor, IPluginConfig config) {
         CompoundTag data = accessor.getServerData();
         int mode = data.getIntOr("mode", 0);
-        String modeName = switch (mode) {
-            case EncoderBlockEntity.MODE_CRUSH -> "Crushing";
-            case EncoderBlockEntity.MODE_INFUSION -> "Infusion";
-            default -> "Upgrade";
+        String modeKey = switch (mode) {
+            case EncoderBlockEntity.MODE_CRUSH -> "gui.ae2apotheotic.mode.crush";
+            case EncoderBlockEntity.MODE_INFUSION -> "gui.ae2apotheotic.mode.infusion";
+            default -> "gui.ae2apotheotic.mode.upgrade";
         };
-        tooltip.add(Component.literal("Mode: ").withStyle(ChatFormatting.GRAY)
-            .append(Component.literal(modeName).withStyle(ChatFormatting.AQUA)));
+        tooltip.add(Component.translatable("gui.ae2apotheotic.mode_label", Component.translatable(modeKey))
+            .withStyle(ChatFormatting.GRAY));
 
         boolean hasSample = data.getBooleanOr("has_sample", false);
         if (hasSample && data.contains("sample_name")) {
             String sample = data.getStringOr("sample_name", "");
-            tooltip.add(Component.literal("Sample: ").withStyle(ChatFormatting.GRAY)
-                .append(Component.literal(sample).withStyle(ChatFormatting.WHITE)));
+            tooltip.add(Component.translatable("gui.ae2apotheotic.sample_label", Component.literal(sample))
+                .withStyle(ChatFormatting.WHITE));
         } else {
-            tooltip.add(Component.literal("Sample: (empty)").withStyle(ChatFormatting.DARK_GRAY));
+            tooltip.add(Component.translatable("gui.ae2apotheotic.sample_empty").withStyle(ChatFormatting.DARK_GRAY));
         }
     }
 }

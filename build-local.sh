@@ -78,7 +78,7 @@ rm -f "$JAR"
 "$JDK/bin/jar.exe" --create --file "$(cygpath -w "$JAR")" -C "$(cygpath -w "$CLASSES")" .
 echo "Built: $JAR"
 
-TEST_CLIENT="/d/ai2/test-client"
+TEST_CLIENT="${TEST_CLIENT:-/d/ai2/test-client}"
 if [[ -d "$TEST_CLIENT/mods" ]]; then
   rm -f "$TEST_CLIENT/mods/$MOD_ID"-*.jar
   cp "$JAR" "$TEST_CLIENT/mods/$MOD_ID-$MOD_VERSION.jar"

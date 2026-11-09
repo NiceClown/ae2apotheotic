@@ -174,11 +174,11 @@ public class EncoderMenu extends AbstractContainerMenu {
             return false;
         }
         InternalInventory inv = encoder.getInventory();
-        ItemStack output = inv.getStackInSlot(EncoderBlockEntity.SLOT_OUTPUT);
-        if (output.isEmpty()) {
-            return AEItems.BLANK_PATTERN.is(inv.getStackInSlot(EncoderBlockEntity.SLOT_BLANK));
+        // Never overwrite a pattern that is already in the output slot; the player has to take it out first.
+        if (!inv.getStackInSlot(EncoderBlockEntity.SLOT_OUTPUT).isEmpty()) {
+            return false;
         }
-        return EncoderBlockEntity.isOurPattern(output);
+        return AEItems.BLANK_PATTERN.is(inv.getStackInSlot(EncoderBlockEntity.SLOT_BLANK));
     }
 
     @Override
@@ -249,8 +249,8 @@ public class EncoderMenu extends AbstractContainerMenu {
             return;
         }
         InternalInventory inv = encoder.getInventory();
-        if (inv.getStackInSlot(EncoderBlockEntity.SLOT_OUTPUT).isEmpty()) {
-            inv.extractItem(EncoderBlockEntity.SLOT_BLANK, 1, false);
+        if (inv.extractItem(EncoderBlockEntity.SLOT_BLANK, 1, false).isEmpty()) {
+            return;
         }
         inv.setItemDirect(EncoderBlockEntity.SLOT_OUTPUT, view.pattern.copy());
     }

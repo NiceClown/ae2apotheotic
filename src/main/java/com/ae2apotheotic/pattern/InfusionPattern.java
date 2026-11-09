@@ -25,6 +25,13 @@ public final class InfusionPattern extends ApotheoticPattern {
         if (enc == null) {
             throw new IllegalArgumentException("Item does not contain an infusion pattern: " + definition);
         }
+        if (enc.outputCount() <= 0) {
+            throw new IllegalArgumentException("Infusion pattern has a non-positive output count");
+        }
+        if (enc.eterna() < 0 || enc.eterna() > 100 || enc.quanta() < 0 || enc.quanta() > 100
+            || enc.arcana() < 0 || enc.arcana() > 100) {
+            throw new IllegalArgumentException("Infusion pattern stats are out of range");
+        }
         this.encoding = enc;
         this.inputs = new IInput[] {
             SimpleInput.of(enc.input(), 1),

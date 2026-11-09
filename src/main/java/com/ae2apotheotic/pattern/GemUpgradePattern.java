@@ -25,6 +25,13 @@ public final class GemUpgradePattern extends ApotheoticPattern {
         if (!gem.isValid() || gem.isPerfect()) {
             throw new IllegalArgumentException("Gem upgrade pattern references an unknown or perfect gem");
         }
+        UnsocketedGem outputGem = UnsocketedGem.of(enc.output().toStack());
+        if (!outputGem.isValid()) {
+            throw new IllegalArgumentException("Gem upgrade pattern references an unknown output gem");
+        }
+        if (!outputGem.gem().equals(gem.gem()) || outputGem.purity() != gem.purity().next()) {
+            throw new IllegalArgumentException("Gem upgrade pattern must produce the next purity of the same gem");
+        }
         if (enc.left().isEmpty() || enc.right().isEmpty()) {
             throw new IllegalArgumentException("Gem upgrade pattern has no materials");
         }

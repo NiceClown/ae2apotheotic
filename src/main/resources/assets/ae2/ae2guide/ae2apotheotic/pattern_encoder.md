@@ -27,7 +27,7 @@ The interface is widened to 210px for clean, readable recipe details and contain
 1. **Top Mode Tabs:** Switch between **Gem Upgrade**, **Gem Crushing**, and **Table Infusion**.
 2. **Sample Slot** (left): Place a sample gem or item to inspect available cutting/crushing/infusion recipes.
 3. **Blank Pattern Slot** (bottom-left): Insert standard AE2 Blank Patterns.
-4. **Encoded Output Slot** (bottom-right): Holds the completed encoded pattern card.
+4. **Encoded Output Slot** (bottom-right): Holds the completed encoded pattern card. Take it out before encoding again — the encoder never overwrites a pattern.
 5. **Main Encoding Area** (center): Controls for purity tiers, material choices, or enchanting stats, followed by the **Encode** button.
 
 <br clear="all" />

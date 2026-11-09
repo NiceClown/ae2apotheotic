@@ -217,12 +217,16 @@ public abstract class AbstractProviderBlockEntity extends BlockEntity
     public void setRemoved() {
         super.setRemoved();
         mainNode.destroy();
+        nodeCreated = false;
+        initScheduled = false;
     }
 
     @Override
     public void onChunkUnloaded() {
         super.onChunkUnloaded();
         mainNode.destroy();
+        nodeCreated = false;
+        initScheduled = false;
     }
 
     @Override

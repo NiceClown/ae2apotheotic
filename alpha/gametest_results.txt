@@ -1,8 +1,0 @@
-[PASS] Gem Upgrade Pattern Encoding & Decoding
-[PASS] Gem Crush Pattern Encoding & Decoding
-[PASS] Infusion Pattern Encoding & Decoding
-[PASS] Gem Provider Composite Terminal Inventory
-[PASS] Gem Provider Terminal Validation Rejects Invalid Items
-[PASS] XP Math Conversion Factors
-[PASS] Jade Server Data Serialization
-[PASS] In-World Adjacent Machine Detection (Gem Case + Raven Table)

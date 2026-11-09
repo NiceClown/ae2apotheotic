@@ -10,6 +10,7 @@ public enum ProviderProblem {
     NO_GEM_CASE,
     GEM_CASE_FULL,
     NO_ROOM_FOR_MATERIALS,
+    MIXED_MATERIALS,
     UPGRADE_REJECTED,
     NO_TABLE,
     STATS_MISMATCH,

@@ -11,6 +11,7 @@ import com.ae2apotheotic.blockentity.InfusionProviderBlockEntity;
 import com.ae2apotheotic.menu.EncoderMenu;
 import com.ae2apotheotic.network.TransferRecipePayload;
 import com.ae2apotheotic.pattern.GemCrushEncoding;
+import com.ae2apotheotic.pattern.GemCrushPattern;
 import com.ae2apotheotic.pattern.GemKeys;
 import com.ae2apotheotic.pattern.GemUpgradeEncoding;
 import com.ae2apotheotic.pattern.GemUpgradePattern;
@@ -98,10 +99,7 @@ public final class AE2ApotheoticTestRunner {
             if (mc.screen instanceof DisconnectedScreen ds) {
                 fail("Multiplayer Client Disconnected Screen -> " + ds.getNarrationMessage().getString());
                 saveResultsToFile("multiplayer_results.txt");
-                try {
-                    new File("multiplayer_done.txt").createNewFile();
-                    new File("d:/ai2/test-client/multiplayer_done.txt").createNewFile();
-                } catch (Exception ignored) {}
+                signalMultiplayerDone();
                 mc.stop();
                 return;
             }
@@ -548,7 +546,13 @@ public final class AE2ApotheoticTestRunner {
             KeyCounter[] inputs = new KeyCounter[] { new KeyCounter() };
             inputs[0].add(AEItemKey.of(crackedStack), 2);
 
-            List<GenericStack> res = provBe.crush(inputs);
+            GemCrushEncoding crushEnc = new GemCrushEncoding(GemCrushEncoding.CrushMode.EXACT,
+                Optional.of(AEItemKey.of(GemItem.createStack(firstGem, Purity.CRACKED, 1))), Purity.CRACKED);
+            ItemStack crushPatternItem = new ItemStack(ModRegistry.GEM_CRUSH_PATTERN.get());
+            crushPatternItem.set(ModRegistry.GEM_CRUSH.get(), crushEnc);
+            GemCrushPattern crushPattern = new GemCrushPattern(AEItemKey.of(crushPatternItem), serverLevel);
+
+            List<GenericStack> res = provBe.crush(crushPattern, inputs);
             assertNotNull(res, "Crush results must not be null");
             assertTrue(!res.isEmpty(), "Crush produces dust");
             assertEqual(res.get(0).what(), GemKeys.dust(), "Yields Gem Dust");
@@ -682,11 +686,15 @@ public final class AE2ApotheoticTestRunner {
             EncoderMenu menu = new EncoderMenu(10, serverPlayer.getInventory(), encBe);
             serverPlayer.containerMenu = menu;
 
+            ItemStack sample = new ItemStack(Items.DIAMOND_SWORD);
+            serverPlayer.getInventory().add(sample.copy());
+
             TransferRecipePayload payload = new TransferRecipePayload(
                 EncoderBlockEntity.MODE_INFUSION,
-                new ItemStack(Items.DIAMOND_SWORD),
+                sample,
+                ItemStack.EMPTY,
                 -1,
-                0,
+                -1,
                 75,
                 35,
                 20
@@ -730,11 +738,14 @@ public final class AE2ApotheoticTestRunner {
         // MP Test 2: Live TCP Packet Dispatch to Server
         runTest("Multiplayer: Client-to-Server Live TCP Packet Dispatch", () -> {
             Minecraft mc = Minecraft.getInstance();
+            // Empty sample: this only exercises the TCP packet path, and the server must not trust arbitrary items
+            // sent by a client anyway.
             TransferRecipePayload payload = new TransferRecipePayload(
                 EncoderBlockEntity.MODE_INFUSION,
-                new ItemStack(Items.NETHERITE_SWORD),
+                ItemStack.EMPTY,
+                ItemStack.EMPTY,
                 -1,
-                0,
+                -1,
                 80,
                 40,
                 25
@@ -745,14 +756,24 @@ public final class AE2ApotheoticTestRunner {
         });
 
         saveResultsToFile("multiplayer_results.txt");
+        signalMultiplayerDone();
+    }
 
-        // Signal completion to host in both current dir and host dir
+    /**
+     * Signals the host instance that the remote client finished. The marker is written to the working directory and,
+     * when {@code -Dae2apotheotic.hostDir=<dir>} is set, also to the host's game directory so a separately launched
+     * host can notice it.
+     */
+    private static void signalMultiplayerDone() {
         try {
             new File("multiplayer_done.txt").createNewFile();
         } catch (Exception ignored) {}
-        try {
-            new File("d:/ai2/test-client/multiplayer_done.txt").createNewFile();
-        } catch (Exception ignored) {}
+        String hostDir = System.getProperty("ae2apotheotic.hostDir");
+        if (hostDir != null && !hostDir.isBlank()) {
+            try {
+                new File(hostDir, "multiplayer_done.txt").createNewFile();
+            } catch (Exception ignored) {}
+        }
     }
 
     private static void pass(String name) {

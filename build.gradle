@@ -40,7 +40,11 @@ dependencies {
         'appliedenergistics2-*.jar',
         'Apotheosis-*.jar',
         'ApothicAttributes-*.jar',
-        'ApothicEnchanting-*.jar'
+        'ApothicEnchanting-*.jar',
+        'Placebo-*.jar',
+        'guideme-*.jar',
+        'jei-*.jar',
+        'Jade-*.jar'
     ])
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 }

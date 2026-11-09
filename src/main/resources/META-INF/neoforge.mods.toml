@@ -36,6 +36,13 @@ infusion crafting on the Enchanting Table of the Raven.
     side="BOTH"
 
 [[dependencies.ae2apotheotic]]
+    modId="guideme"
+    type="required"
+    versionRange="[26.1.14-beta,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.ae2apotheotic]]
     modId="apotheosis"
     type="required"
     versionRange="[9.1.0,)"
@@ -43,8 +50,36 @@ infusion crafting on the Enchanting Table of the Raven.
     side="BOTH"
 
 [[dependencies.ae2apotheotic]]
+    modId="placebo"
+    type="required"
+    versionRange="[10.0.2,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.ae2apotheotic]]
+    modId="apothic_attributes"
+    type="required"
+    versionRange="[3.0.1,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.ae2apotheotic]]
     modId="apothic_enchanting"
     type="required"
     versionRange="[2.1.0,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.ae2apotheotic]]
+    modId="jei"
+    type="optional"
+    versionRange="[29.5.0.26,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.ae2apotheotic]]
+    modId="jade"
+    type="optional"
+    versionRange="[26.0.0,)"
     ordering="AFTER"
     side="BOTH"

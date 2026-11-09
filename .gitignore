@@ -35,5 +35,7 @@ desktop.ini
 
 # Scratch / Dev scripts
 tools/
+alpha/
 *.tmp
 *.bak
+gametest_results.txt

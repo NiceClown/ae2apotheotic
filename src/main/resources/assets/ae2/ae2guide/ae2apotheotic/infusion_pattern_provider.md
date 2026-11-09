@@ -55,7 +55,7 @@ Enchanting table infusions require experience points based on the recipe's Etern
 * Storing your liquid XP in the ME system provides seamless, fully hands-free infusion autocrafting.
 
 ### 2. Internal XP Buffer
-* If ME network XP is insufficient or unavailable, experience is paid from the provider's internal buffer (default capacity: 10,000 points).
+* If ME network XP is insufficient or unavailable, experience is paid from the provider's internal buffer (default capacity: 1,000,000 points).
 * Manageable in the GUI via **"+1 lvl"**, **"+All"**, and **"Take"** buttons.
 * Fluid pipes can also pump liquid experience directly into the block from any face.
 

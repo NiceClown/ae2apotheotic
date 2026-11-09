@@ -275,6 +275,48 @@ public final class EncoderLogic {
         return value < 0 ? NO_VALUE : Math.round(value * 10);
     }
 
+    /** Infusion recipes for the given input, in the same stable order the encoder cycles through them. */
+    private static List<RecipeHolder<InfusionRecipe>> infusionRecipes(ServerLevel level, ItemStack input) {
+        List<RecipeHolder<InfusionRecipe>> recipes = new ArrayList<>();
+        for (RecipeHolder<InfusionRecipe> holder : level.getServer().getRecipeManager().recipeMap().byType(Ench.RecipeTypes.INFUSION)) {
+            if (holder.value().getInput().test(input)) {
+                recipes.add(holder);
+            }
+        }
+        recipes.sort(Comparator.comparing(h -> h.id().identifier().toString()));
+        return recipes;
+    }
+
+    /**
+     * Index of the infusion recipe the given item, stats and expected result resolve to, in the order
+     * {@link #infusionRecipes} uses, or -1 if nothing matches. Used by the JEI transfer so the encoder selects the
+     * recipe the player clicked instead of an arbitrary one.
+     */
+    public static int findInfusionRecipeIndex(ServerLevel level, ItemStack sample, int eterna, int quanta, int arcana,
+        ItemStack expectedResult) {
+        if (sample.isEmpty()) {
+            return -1;
+        }
+        ItemStack input = sample.copyWithCount(1);
+        List<RecipeHolder<InfusionRecipe>> recipes = infusionRecipes(level, input);
+        for (int i = 0; i < recipes.size(); i++) {
+            InfusionRecipe candidate = recipes.get(i).value();
+            if (!candidate.matches(input, eterna, quanta, arcana)) {
+                continue;
+            }
+            ItemStack produced = candidate.assemble(input.copy(), eterna, quanta, arcana);
+            if (produced.isEmpty()) {
+                continue;
+            }
+            if (expectedResult.isEmpty()
+                || (ItemStack.isSameItemSameComponents(produced, expectedResult)
+                    && produced.getCount() == expectedResult.getCount())) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     private static void infusion(ServerLevel level, EncoderBlockEntity encoder, View view) {
         ItemStack sample = encoder.getSample();
         if (sample.isEmpty()) {
@@ -285,13 +327,7 @@ public final class EncoderLogic {
         view.previewInput = input.copy();
         view.previewRight = new ItemStack(Items.LAPIS_LAZULI, InfusionEncoding.LAPIS_COST);
 
-        List<RecipeHolder<InfusionRecipe>> recipes = new ArrayList<>();
-        for (RecipeHolder<InfusionRecipe> holder : level.getServer().getRecipeManager().recipeMap().byType(Ench.RecipeTypes.INFUSION)) {
-            if (holder.value().getInput().test(input)) {
-                recipes.add(holder);
-            }
-        }
-        recipes.sort(Comparator.comparing(h -> h.id().identifier().toString()));
+        List<RecipeHolder<InfusionRecipe>> recipes = infusionRecipes(level, input);
         if (recipes.isEmpty()) {
             view.status = EncoderStatus.NO_INFUSION_RECIPE;
             return;

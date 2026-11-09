@@ -343,7 +343,11 @@ public class EncoderScreen extends FlatScreen<EncoderMenu> {
 
     private void drawStatus(GuiGraphicsExtractor g) {
         EncoderStatus status = menu.status();
-        Component text = status.isOk() && !menu.canEncode() ? Component.translatable("gui.ae2apotheotic.status.need_blank") : status.text();
+        Component text = status.isOk() && !menu.canEncode()
+            ? Component.translatable(menu.getSlot(EncoderMenu.SLOT_OUTPUT).hasItem()
+                ? "gui.ae2apotheotic.status.output_full"
+                : "gui.ae2apotheotic.status.need_blank")
+            : status.text();
         centeredFit(g, text, imageWidth / 2, 119, PANEL_X1 - PANEL_X0 - 8, statusColors()[1]);
     }
 

@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **JEI Recipe Transfer Integration (`@JeiPlugin`):**
   * Clicking the `+` button in JEI for **Gem Cutting / Purity Upgrade** and **Table Infusion** recipes now instantly configures the Pattern Encoder!
   * Automatically sets the encoder mode, transfers the input sample, selects target purity, and configures exact required Eterna, Quanta, and Arcana stats.
-  * Supported by a secure client-server network payload (`TransferRecipePayload`).
+  * Supported by a server-authoritative network payload (`TransferRecipePayload`): the server validates the sample, resolves the clicked infusion recipe itself and never trusts client-supplied items.
 * **Jade / Waila In-World HUD Tooltips (`@WailaPlugin`):**
   * **Gem Pattern Provider:** displays ME Network online/offline status, adjacent Gem Case detection, total active patterns count, and active problem warnings.
   * **Infusion Pattern Provider:** displays ME Network status, connected Enchanting Table type (Standard vs Raven Enchanting Table), internal stored XP (pts) and available network XP (mB), active patterns, and problem warnings.
@@ -30,6 +30,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * Verified client-to-server custom payload dispatch over real TCP socket with 100% test pass rate.
 
 ### Fixed
+* **Recipe Transfer Security & Correctness:**
+  * `TransferRecipePayload` is now server-authoritative: the sample must be valid for the current encoder slot/mode and, outside creative mode, must exist in the player's inventory (one item is consumed). The previous sample is returned to the player instead of being lost.
+  * The client can no longer inject arbitrary items into the encoder, and mode, purity and stat values are clamped server-side.
+  * Infusion recipe selection is resolved on the server from the clicked result and minimum stat values, so the encoder always picks the recipe the player clicked.
+  * JEI transfer now reports a clear error when the sample is missing or not owned, and rejects `BasicGemCuttingRecipe` (only purity upgrades are encodable).
+* **Encoder Output Safety:**
+  * The Encode button now requires an empty output slot and a blank pattern; it never overwrites a pattern that is already in the output slot.
+  * The status bar explains when the output slot has to be emptied first.
+* **Gem Pattern Provider:**
+  * Crushing now uses the yield encoded in the pattern, fixing over-yield for `Any — <Purity>` and `Any gem` patterns.
+  * Inputs with mixed materials in a single slot are rejected instead of being silently merged.
+  * Gem category list is cached, and the provider's AE2 node flags are reset when the block is removed or its chunk unloads.
+* **Pattern Validation:**
+  * Decoded gem upgrade patterns must produce the next purity of the same gem; exact crushing patterns must match their encoded purity; infusion patterns reject non-positive output counts and out-of-range stats; pattern inputs require a positive multiplier.
+* **Localization & Documentation:**
+  * All Jade tooltips are localized in English and Russian, including problem states, encoder mode/sample and XP values.
+  * The guide and README now correctly state that the Gem Pattern Provider **is** visible in the ME Pattern Access Terminal, that the encoder never overwrites output patterns, and that the default XP buffer is 1,000,000 points.
+* **Build & Repository Hygiene:**
+  * Added missing `placebo`, `apothic_attributes`, `guideme`, `jei` and `jade` dependency declarations to `neoforge.mods.toml`.
+  * Added the MIT `LICENSE` file and removed the stale duplicate `alpha/` source tree and old guide tree from version control.
+  * Test runner no longer hardcodes a machine-specific multiplayer directory.
 * **Gem Case Transaction Safety & Rollback:**
   * Tracked exact slot indices and amounts during upgrade material insertion into adjacent Gem Cases.
   * If a recipe upgrade fails, rollback now extracts only the exact items and slots inserted during that craft, completely protecting any pre-existing player items in the Gem Case from being altered or extracted.

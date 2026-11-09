@@ -6,6 +6,7 @@ import com.ae2apotheotic.menu.EncoderMenu;
 import com.ae2apotheotic.network.TransferRecipePayload;
 import com.ae2apotheotic.registry.ModRegistry;
 import dev.shadowsoffire.apotheosis.compat.jei.AdventureJEIPlugin;
+import dev.shadowsoffire.apotheosis.socket.gem.UnsocketedGem;
 import dev.shadowsoffire.apotheosis.socket.gem.cutting.GemCuttingRecipe;
 import dev.shadowsoffire.apotheosis.socket.gem.cutting.PurityUpgradeRecipe;
 import dev.shadowsoffire.apothic_enchanting.compat.InfusionRecipeCategory;
@@ -19,9 +20,11 @@ import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.transfer.IRecipeTransferContext;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
 import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
+import mezz.jei.api.recipe.transfer.IRecipeTransferHandlerHelper;
 import mezz.jei.api.recipe.types.IRecipeType;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
@@ -40,8 +43,9 @@ public class AE2ApotheoticJeiPlugin implements IModPlugin {
 
     @Override
     public void registerRecipeTransferHandlers(IRecipeTransferRegistration registration) {
-        registration.addRecipeTransferHandler(new GemCuttingTransferHandler(), AdventureJEIPlugin.GEM_CUTTING);
-        registration.addRecipeTransferHandler(new InfusionTransferHandler(), InfusionRecipeCategory.TYPE);
+        IRecipeTransferHandlerHelper helper = registration.getTransferHelper();
+        registration.addRecipeTransferHandler(new GemCuttingTransferHandler(helper), AdventureJEIPlugin.GEM_CUTTING);
+        registration.addRecipeTransferHandler(new InfusionTransferHandler(helper), InfusionRecipeCategory.TYPE);
     }
 
     private static void sendPayload(TransferRecipePayload payload) {
@@ -51,7 +55,41 @@ public class AE2ApotheoticJeiPlugin implements IModPlugin {
         }
     }
 
+    /** First non-empty stack of the given role, or {@link ItemStack#EMPTY}. */
+    private static ItemStack firstInput(IRecipeSlotsView recipeSlots) {
+        return recipeSlots.getSlotViews(RecipeIngredientRole.INPUT).stream()
+            .flatMap(IRecipeSlotView::getItemStacks)
+            .filter(stack -> !stack.isEmpty())
+            .findFirst()
+            .orElse(ItemStack.EMPTY);
+    }
+
+    /** First gem among the inputs, used as the sample for gem cutting recipes. */
+    private static ItemStack firstGem(IRecipeSlotsView recipeSlots) {
+        return recipeSlots.getSlotViews(RecipeIngredientRole.INPUT).stream()
+            .flatMap(IRecipeSlotView::getItemStacks)
+            .filter(stack -> !stack.isEmpty() && UnsocketedGem.of(stack).isValid())
+            .findFirst()
+            .orElse(ItemStack.EMPTY);
+    }
+
+    private static @Nullable IRecipeTransferError checkOwned(Player player, ItemStack sample, IRecipeTransferHandlerHelper helper) {
+        if (sample.isEmpty()) {
+            return helper.createUserErrorWithTooltip(Component.translatable("gui.ae2apotheotic.transfer.no_sample"));
+        }
+        if (!player.hasInfiniteMaterials() && player.getInventory().findSlotMatchingItem(sample) < 0) {
+            return helper.createUserErrorWithTooltip(Component.translatable("gui.ae2apotheotic.transfer.not_owned"));
+        }
+        return null;
+    }
+
     private static class GemCuttingTransferHandler implements IRecipeTransferHandler<EncoderMenu, GemCuttingRecipe> {
+        private final IRecipeTransferHandlerHelper helper;
+
+        GemCuttingTransferHandler(IRecipeTransferHandlerHelper helper) {
+            this.helper = helper;
+        }
+
         @Override
         public Class<? extends EncoderMenu> getContainerClass() {
             return EncoderMenu.class;
@@ -76,23 +114,26 @@ public class AE2ApotheoticJeiPlugin implements IModPlugin {
             boolean maxTransfer,
             boolean doTransfer
         ) {
+            if (!(recipe instanceof PurityUpgradeRecipe purityRecipe)) {
+                // BasicGemCuttingRecipe has no purity step, so the encoder cannot express it.
+                return helper.createUserErrorWithTooltip(Component.translatable("gui.ae2apotheotic.transfer.unsupported"));
+            }
+            ItemStack sample = firstGem(recipeSlots);
+            if (sample.isEmpty()) {
+                return helper.createUserErrorWithTooltip(Component.translatable("gui.ae2apotheotic.transfer.no_gem"));
+            }
+            IRecipeTransferError ownership = checkOwned(player, sample, helper);
+            if (ownership != null) {
+                return ownership;
+            }
             if (!doTransfer) {
                 return null;
             }
-            ItemStack sample = recipeSlots.getSlotViews(RecipeIngredientRole.INPUT).stream()
-                .flatMap(IRecipeSlotView::getItemStacks)
-                .findFirst()
-                .orElse(ItemStack.EMPTY);
-
-            int purity = -1;
-            if (recipe instanceof PurityUpgradeRecipe purityRecipe) {
-                purity = purityRecipe.purity().ordinal();
-            }
-
             sendPayload(new TransferRecipePayload(
                 EncoderBlockEntity.MODE_UPGRADE,
-                sample,
-                purity,
+                sample.copyWithCount(1),
+                ItemStack.EMPTY,
+                purityRecipe.purity().ordinal(),
                 -1,
                 0,
                 0,
@@ -115,6 +156,12 @@ public class AE2ApotheoticJeiPlugin implements IModPlugin {
     }
 
     private static class InfusionTransferHandler implements IRecipeTransferHandler<EncoderMenu, InfusionRecipe> {
+        private final IRecipeTransferHandlerHelper helper;
+
+        InfusionTransferHandler(IRecipeTransferHandlerHelper helper) {
+            this.helper = helper;
+        }
+
         @Override
         public Class<? extends EncoderMenu> getContainerClass() {
             return EncoderMenu.class;
@@ -139,21 +186,26 @@ public class AE2ApotheoticJeiPlugin implements IModPlugin {
             boolean maxTransfer,
             boolean doTransfer
         ) {
+            ItemStack sample = firstInput(recipeSlots);
+            IRecipeTransferError ownership = checkOwned(player, sample, helper);
+            if (ownership != null) {
+                return ownership;
+            }
             if (!doTransfer) {
                 return null;
             }
-            ItemStack sample = recipeSlots.getSlotViews(RecipeIngredientRole.INPUT).stream()
-                .flatMap(IRecipeSlotView::getItemStacks)
-                .findFirst()
-                .orElse(ItemStack.EMPTY);
 
-            int eterna = (int) Math.round(recipe.getRequirements().eterna());
-            int quanta = (int) Math.round(recipe.getRequirements().quanta());
-            int arcana = (int) Math.round(recipe.getRequirements().arcana());
+            // Minimum whole stat values, exactly like the encoder's "Auto" button.
+            int eterna = (int) Math.ceil(Math.max(0, recipe.getRequirements().eterna()));
+            int quanta = (int) Math.ceil(Math.max(0, recipe.getRequirements().quanta()));
+            int arcana = (int) Math.ceil(Math.max(0, recipe.getRequirements().arcana()));
+            ItemStack input = sample.copyWithCount(1);
+            ItemStack result = recipe.assemble(input.copy(), eterna, quanta, arcana);
 
             sendPayload(new TransferRecipePayload(
                 EncoderBlockEntity.MODE_INFUSION,
-                sample,
+                input,
+                result,
                 -1,
                 -1,
                 eterna,

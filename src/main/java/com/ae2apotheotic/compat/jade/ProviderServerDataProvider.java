@@ -26,7 +26,7 @@ public enum ProviderServerDataProvider implements IServerDataProvider<BlockAcces
             data.putBoolean("online", gemProvider.isOnline());
             data.putInt("patterns", gemProvider.getPatternCount());
             data.putBoolean("has_case", gemProvider.findGemCase() != null);
-            data.putString("problem", gemProvider.getLastProblem().name());
+            data.putInt("problem", gemProvider.getLastProblem().ordinal());
         } else if (accessor.getBlockEntity() instanceof InfusionProviderBlockEntity infProvider) {
             data.putString("type", "infusion_provider");
             data.putBoolean("online", infProvider.isOnline());
@@ -34,7 +34,7 @@ public enum ProviderServerDataProvider implements IServerDataProvider<BlockAcces
             data.putInt("flags", infProvider.machineFlags());
             data.putInt("stored_xp", infProvider.getStoredXp());
             data.putLong("network_xp", infProvider.getNetworkXpMb());
-            data.putString("problem", infProvider.getLastProblem().name());
+            data.putInt("problem", infProvider.getLastProblem().ordinal());
         }
     }
 }

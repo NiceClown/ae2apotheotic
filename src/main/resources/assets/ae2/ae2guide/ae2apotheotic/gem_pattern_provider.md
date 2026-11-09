@@ -74,7 +74,8 @@ Upgrade patterns go to their gem, "This gem" crushing patterns to that gem's Dus
 all other crushing patterns to Bulk Crushing.
 
 > [!NOTE]
-> Because patterns are sorted by gem, this provider is **not** shown in the ME Pattern Access Terminal.
+> This provider **is** shown in the ME Pattern Access Terminal: its categorized slots are exposed as one composite
+> inventory, so patterns can be viewed and managed from there too.
 > Patterns are stored by gem id, so adding or removing gems never moves them around.
 
 <br clear="all" />

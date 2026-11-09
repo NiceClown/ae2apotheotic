@@ -74,4 +74,5 @@ To solve this, **AE2 Apotheotic Automation** provides three dedicated pattern ca
 
 To clear any encoded pattern card and recover the original **AE2 Blank Pattern**:
 * **Shift + Right-Click** with the encoded pattern in your hand while looking at the air.
-* Alternatively, place the pattern card into the output slot of the <ItemLink id="ae2apotheotic:pattern_encoder" /> to overwrite it directly with a new recipe.
+
+The <ItemLink id="ae2apotheotic:pattern_encoder" /> never overwrites an encoded pattern: take the finished pattern out of its output slot before encoding a new one.

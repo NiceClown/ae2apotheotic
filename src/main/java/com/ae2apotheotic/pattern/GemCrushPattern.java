@@ -24,8 +24,12 @@ public final class GemCrushPattern extends ApotheoticPattern {
         List<AEItemKey> candidates = switch (enc.mode()) {
             case EXACT -> {
                 AEItemKey gem = enc.gem().orElseThrow(() -> new IllegalArgumentException("Exact crushing pattern without a gem"));
-                if (!UnsocketedGem.of(gem.toStack()).isValid()) {
+                UnsocketedGem unsocketed = UnsocketedGem.of(gem.toStack());
+                if (!unsocketed.isValid()) {
                     throw new IllegalArgumentException("Crushing pattern references an unknown gem");
+                }
+                if (unsocketed.purity() != enc.purity()) {
+                    throw new IllegalArgumentException("Exact crushing pattern purity does not match its gem");
                 }
                 yield List.of(gem);
             }

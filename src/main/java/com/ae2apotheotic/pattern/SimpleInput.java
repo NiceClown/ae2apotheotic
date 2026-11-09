@@ -18,6 +18,9 @@ public final class SimpleInput implements IPatternDetails.IInput {
         if (candidates.length == 0) {
             throw new IllegalArgumentException("A pattern input needs at least one candidate");
         }
+        if (multiplier <= 0) {
+            throw new IllegalArgumentException("A pattern input needs a positive multiplier");
+        }
         this.candidates = candidates;
         this.multiplier = multiplier;
     }
